@@ -52,11 +52,16 @@
   the tray it starts no background processes, only reads a few system files every 2 seconds.
   Memory is the weak spot: Python and Qt cost about 60 MB with the package and about 100 MB with
   the AppImage ([why](#it-uses-100-mb-of-memory)).
-- **Notices things and says so.** When the battery drained in sleep, when an app keeps the NVIDIA
-  GPU awake on battery, when a game runs in Eco or Silent, a notification says it once, with a
-  button to fix it. Nothing changes unless you press it.
+- **Notices things and says so.** When the battery drained in sleep, when it charged past the limit
+  while the laptop was off, when an app keeps the NVIDIA GPU awake on battery, when a game runs in
+  Eco or Silent, when a monitor on HDMI gets no picture, a notification says it once, with a button
+  to fix it. Nothing changes unless you press it.
+- **Finds what fights it.** TLP, auto-cpufreq, TuneD, supergfxd, KDE's own power profiles or the
+  desktop's charge limit changing the same things show up in Setup and the main window, with the
+  fix ([details](#what-it-changes-on-your-system)).
 - **Eco without a logout.** GPU modes go through [Cardwire](https://opengamingcollective.github.io/cardwire/):
-  Eco and Standard switch in a moment, and HDMI keeps working.
+  Eco and Standard switch in a moment. Laptops without a discrete GPU (Strix Halo, Zenbook,
+  Vivobook) get no GPU block at all.
 - **One password, once.** On first start a Setup window installs what the laptop still needs
   (asusd, Cardwire, the key rule, the tray extension on GNOME) behind a single prompt. No terminal
   steps.
@@ -73,24 +78,29 @@
 - CPU power limits (SPL, sPPT, fPPT), NVIDIA Dynamic Boost and temperature target
 - CPU Boost and the CPU's power mode (EPP) per mode
 - Situations (experimental, [below](#situations)): On the go, Desk, Gaming, Quiet, each setting the
-  mode, GPU, screen and keyboard light with one click
+  mode, GPU, screen and keyboard light with one click, from the window or the tray menu
 
 **GPU**
 - Eco, Standard, Ultimate (MUX) and Optimized (Eco on battery)
 - The tray tooltip names the apps keeping the dGPU awake; on battery a notification names them too
 - A game started in Eco or Silent gets a hint to switch; or, if you turn it on in Extra, the mode
-  switches by itself (say Turbo on the charger, Balanced on battery) and comes back when you quit
+  switches by itself (say Turbo on the charger, Balanced on battery) and comes back when you quit.
+  Steam, Proton, Wine, Lutris and Heroic games are recognised, Steam ones by name
+- A monitor on the NVIDIA GPU's HDMI port that KDE did not pick up (it started in Eco) is turned on
+  without a logout; Optimized stays in Standard while one is plugged in
+- Memory for the integrated GPU, where the firmware offers it (Extra)
 
 **Screen, keyboard, battery**
 - 60 Hz, max Hz or automatic by power source, panel overdrive
 - Aura effects, colour, speed, brightness, backlight timeout, lighting on boot and sleep
 - Charge limit (only the values the firmware keeps, on models that take just 60 / 80 / 100),
   one-time charge to 100%, battery health, time left or time to the limit
-- Battery history, what each mode drew, how much a night's sleep cost
+- Battery history, what each mode drew, how much a night's sleep cost, wear over months
 
 **Keys and system**
 - Actions for Fn+F4, the Armoury key and other laptop keys, plus any keyboard shortcut
 - MangoHud toggle, clamshell mode, run on startup
+- Diagnostics in one click, and a problem report that opens a GitHub issue already filled in
 - BIOS for your model (the ASUS source G-Helper uses), kernel, NVIDIA driver, asusctl,
   Cardwire and firmware updates in one window
 - Light and dark theme following the desktop, optionally in the desktop's accent colour
@@ -176,7 +186,7 @@ Needs Python 3 with PySide6, python-evdev and dbus-python. Build the AppImage wi
 | Needs | |
 |---|---|
 | **Laptop** | An ASUS laptop supported by [asusctl](https://asus-linux.org), ROG and TUF first of all |
-| **GPU modes** | [Cardwire](https://opengamingcollective.github.io/cardwire/) and a kernel with BPF LSM (Fedora and Arch have it; Ubuntu needs a boot option) |
+| **GPU modes** | [Cardwire](https://opengamingcollective.github.io/cardwire/) and a kernel with BPF LSM (Fedora and Arch have it; Ubuntu needs a boot option). Laptops with only an integrated GPU (Strix Halo, Zenbook, Vivobook) need neither: the GPU block is hidden |
 | **NVIDIA driver** | Optional: for games on the dGPU and its temperature |
 
 | Desktop | Status |
@@ -196,7 +206,10 @@ real desktop session yet. A [report](#reporting-a-problem) from one helps.
 | **Eco** | Only the integrated GPU; the NVIDIA GPU powers off | A moment, no logout |
 | **Standard** | Both GPUs; the NVIDIA GPU sleeps until a game or app uses it | A moment, no logout |
 | **Ultimate** | The NVIDIA GPU drives the screen directly (MUX), for the most FPS | Reboot |
-| **Optimized** | Eco on battery, Standard when plugged in | Automatic |
+| **Optimized** | Eco on battery, Standard when plugged in; stays in Standard while a monitor is on the NVIDIA GPU's port | Automatic |
+
+On many ASUS laptops HDMI is wired to the NVIDIA GPU, so in Eco it shows nothing; see
+[A monitor on HDMI shows nothing](#troubleshooting).
 
 Eco and Standard go through Cardwire, the successor of supergfxd from the asus-linux and Open
 Gaming Collective people. It never unloads the NVIDIA driver: it stops new programs from opening
