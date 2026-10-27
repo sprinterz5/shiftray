@@ -1,5 +1,5 @@
 Name:           shiftray
-Version:        0.13.0
+Version:        0.13.1
 Release:        1%{?dist}
 Summary:        asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops
 
@@ -64,6 +64,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_udevrulesdir}/70-%{name}.rules
 
 %changelog
+* Tue Oct 27 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.13.1-1
+- HDMI on the dGPU turns on without a logout; iGPU memory sizes are right
+
 * Thu Oct 22 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.13.0-1
 - No GPU modes on laptops without a dGPU; the package takes over from the AppImage
 

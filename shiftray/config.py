@@ -6,7 +6,7 @@ from PySide6 import QtWidgets
 
 APP = "shiftray"  # id: paths, the .desktop file, the window class
 NAME = "Shiftray"  # what people see
-VERSION = "0.13.0"
+VERSION = "0.13.1"
 HOMEPAGE = "https://github.com/sprinterz5/shiftray"
 DONATE_URL = ""  # PayPal donation link; Credits shows a support link once it is set
 CONFIG_DIR = os.path.join(os.path.expanduser("~/.config"), APP)

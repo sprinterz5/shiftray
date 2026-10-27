@@ -76,6 +76,9 @@
   </provides>
 
   <releases>
+    <release version="0.13.1" date="2026-10-27">
+      <description><p>A monitor on the NVIDIA GPU's HDMI port that shows nothing after KDE started in Eco can be turned on from a notification, without logging out. The iGPU memory choices show the right sizes.</p></description>
+    </release>
     <release version="0.13.0" date="2026-10-22">
       <description><p>Laptops without a discrete GPU (Strix Halo, Zenbook, Vivobook) no longer show GPU modes. The installed package takes over the menu entry and autostart from an earlier AppImage.</p></description>
     </release>

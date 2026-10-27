@@ -1,6 +1,6 @@
 # Maintainer: sprinterz5 <63397324+sprinterz5@users.noreply.github.com>
 pkgname=shiftray
-pkgver=0.13.0
+pkgver=0.13.1
 pkgrel=1
 pkgdesc="asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops"
 arch=(any)

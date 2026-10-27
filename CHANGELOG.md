@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.13.1
 - **HDMI on the NVIDIA GPU**: when KDE started in Eco and a monitor on the dGPU's port shows nothing
   in Standard, a notification offers **Turn on**: the GPU is announced to KDE again, no logout.
   Optimized no longer switches to Eco while a monitor is plugged in there.
+- **iGPU memory sizes** in Extra: the choices said the driver's index (0, 1, 2…) as gigabytes; they
+  now say the real size (Auto, 2 GB, 3 GB…).
 
 ## 0.13.0
 - **Laptops without a discrete GPU** (Strix Halo, Zenbook, Vivobook): the GPU mode block, its tray
