@@ -167,11 +167,13 @@ def mute_monitors():
 
 def unmute_monitors(card):
     """Announces the NVIDIA sound card again, so logind gives the user access to it (one password),
-    then WirePlumber looks at the sound cards again."""
+    then WirePlumber looks at the sound cards again. Easy Effects loses its links when WirePlumber
+    restarts and plays into nothing, so it is restarted too when it runs as a service."""
     ok, out = run("pkexec", "udevadm", "trigger", "--action=change", "--parent-match=" + card, timeout=120)
     if ok:
         run("udevadm", "settle", timeout=10)
         run("systemctl", "--user", "restart", "wireplumber", timeout=30)
+        run("systemctl", "--user", "try-restart", "easyeffects.service", timeout=30)
     return ok, out
 
 
