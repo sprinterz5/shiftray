@@ -488,5 +488,8 @@
  "{change}% in {months} months": "{months} 个月 {change}%",
  "External monitor": "外接显示器",
  "Turn on": "开启",
- "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "{port} 上的显示器没有画面：该接口连接在 NVIDIA 显卡上，而 KDE 启动时它处于关闭状态（Eco）。无需注销即可开启？"
+ "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "{port} 上的显示器没有画面：该接口连接在 NVIDIA 显卡上，而 KDE 启动时它处于关闭状态（Eco）。无需注销即可开启？",
+ "Fix": "修复",
+ "HDMI sound": "HDMI 声音",
+ "No sound on the monitor or TV on {port}: the NVIDIA GPU's sound came up without access for you, so it is missing from the sound outputs. Fix it?": "{port} 上的显示器或电视没有声音：NVIDIA 显卡的声音设备出现时没有给你访问权限，因此不在声音输出列表中。要修复吗？"
 }

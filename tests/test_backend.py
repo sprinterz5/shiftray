@@ -248,5 +248,27 @@ class DarkMonitors(unittest.TestCase):
                 self.assertEqual(gpu.dark_monitors()[1], [])
 
 
+class MuteMonitors(unittest.TestCase):
+    """A TV on the dGPU's HDMI without sound: the NVIDIA sound card came up root-only."""
+
+    def run_with(self, plugged=("HDMI-A-1",), exists=True, access=False):
+        with mock.patch.object(gpu, "dgpu_monitors", return_value=("/sys/class/drm/card0", list(plugged))), \
+                mock.patch.object(gpu, "dgpu_sound_card", return_value="/sys/class/sound/card0"), \
+                mock.patch.object(gpu.os.path, "exists", return_value=exists), \
+                mock.patch.object(gpu.os, "access", return_value=access) as acc:
+            result = gpu.mute_monitors()
+        if plugged and exists:
+            self.assertEqual(acc.call_args[0][0], "/dev/snd/controlC0")
+        return result[1]
+
+    def test_root_only_card(self):
+        self.assertEqual(self.run_with(), ["HDMI-A-1"])
+
+    def test_nothing_to_fix(self):
+        self.assertEqual(self.run_with(access=True), [])   # the user has it
+        self.assertEqual(self.run_with(plugged=()), [])     # no monitor on the dGPU
+        self.assertEqual(self.run_with(exists=False), [])   # no sound card node (Eco)
+
+
 if __name__ == "__main__":
     unittest.main()

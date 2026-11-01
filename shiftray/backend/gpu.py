@@ -143,6 +143,38 @@ def announce_gpu(card):
     return run("pkexec", "udevadm", "trigger", "--action=add", card, timeout=120)
 
 
+def dgpu_sound_card():
+    """/sys/class/sound/cardN of the NVIDIA GPU's HDMI audio, or None."""
+    for card in sorted(glob.glob("/sys/class/sound/card[0-9]*")):
+        if _read(os.path.join(card, "device", "vendor")) == "0x10de":
+            return card
+    return None
+
+
+def mute_monitors():
+    """(sound card, ports): monitors on the dGPU whose sound the user cannot open. logind gives the
+    seat's user access to a sound card when it appears; the NVIDIA one appears with the dGPU (Eco to
+    Standard) and is sometimes left root-only, so PipeWire never sees it and the TV stays silent."""
+    _, plugged = dgpu_monitors()
+    card = dgpu_sound_card() if plugged else None
+    if not card:
+        return card, []
+    control = "/dev/snd/controlC" + os.path.basename(card)[len("card"):]
+    if not os.path.exists(control) or os.access(control, os.R_OK | os.W_OK):
+        return card, []
+    return card, plugged
+
+
+def unmute_monitors(card):
+    """Announces the NVIDIA sound card again, so logind gives the user access to it (one password),
+    then WirePlumber looks at the sound cards again."""
+    ok, out = run("pkexec", "udevadm", "trigger", "--action=change", "--parent-match=" + card, timeout=120)
+    if ok:
+        run("udevadm", "settle", timeout=10)
+        run("systemctl", "--user", "restart", "wireplumber", timeout=30)
+    return ok, out
+
+
 def gpu_supported():
     """GPU modes to offer; none without a dGPU."""
     if not has_dgpu():

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- **HDMI sound on the NVIDIA GPU**: after Eco → Standard the NVIDIA sound card sometimes came up
+  without access for the user, so the TV or monitor had a picture but was missing from the sound
+  outputs. A notification now offers **Fix**: the card is announced again and WirePlumber restarted.
+
 ## 0.13.1
 - **HDMI on the NVIDIA GPU**: when KDE started in Eco and a monitor on the dGPU's port shows nothing
   in Standard, a notification offers **Turn on**: the GPU is announced to KDE again, no logout.

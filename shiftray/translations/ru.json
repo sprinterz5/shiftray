@@ -488,5 +488,8 @@
  "{change}% in {months} months": "{change}% за {months} мес.",
  "External monitor": "Внешний монитор",
  "Turn on": "Включить",
- "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "Монитор на {port} без картинки: этот разъём подключён к NVIDIA, а KDE запустилась, когда она была выключена (Eco). Включить без выхода из сессии?"
+ "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "Монитор на {port} без картинки: этот разъём подключён к NVIDIA, а KDE запустилась, когда она была выключена (Eco). Включить без выхода из сессии?",
+ "Fix": "Исправить",
+ "HDMI sound": "Звук по HDMI",
+ "No sound on the monitor or TV on {port}: the NVIDIA GPU's sound came up without access for you, so it is missing from the sound outputs. Fix it?": "Нет звука на мониторе или телевизоре на {port}: звук NVIDIA появился без доступа для вас, поэтому его нет среди звуковых выходов. Исправить?"
 }

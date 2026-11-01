@@ -312,6 +312,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         QtCore.QTimer.singleShot(10000, self.check_app_update)
         # a monitor on the dGPU's port that KDE does not drive (it started in Eco): a few sysfs reads
         self.monitors_told = set()
+        self.sound_told = set()  # the same for their sound: the NVIDIA sound card left root-only
         self.monitor_timer = QtCore.QTimer(self, interval=10000, timeout=self.check_monitors)
         if self.gpu_buttons:
             self.monitor_timer.start()
@@ -1407,7 +1408,23 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
                 "started while it was off (Eco). Turn it on without logging out?", port=", ".join(dark)),
                 tr("Turn on"), lambda: self.bg(hw.announce_gpu, card,
                                                then=lambda r: self.report(r, tr("External monitor"))))
+
+        def silent(result):
+            card, mute = result
+            if not mute:
+                self.sound_told.clear()
+                return
+            if not [p for p in mute if p not in self.sound_told]:
+                return
+            self.sound_told.update(mute)
+            log.info(f"no sound on the dGPU's monitor: {mute}, {card} is root-only")
+            self.notify("audio-volume-muted", tr(
+                "No sound on the monitor or TV on {port}: the NVIDIA GPU's sound came up without access "
+                "for you, so it is missing from the sound outputs. Fix it?", port=", ".join(mute)),
+                tr("Fix"), lambda: self.bg(hw.unmute_monitors, card,
+                                           then=lambda r: self.report(r, tr("HDMI sound"))))
         self.bg(hw.dark_monitors, then=found, key="monitors")
+        self.bg(hw.mute_monitors, then=silent, key="sound")
 
     def offer_cardwire_restart(self, mode, done):
         """Cardwire started before the NVIDIA driver (first boot after a kernel update) and does not

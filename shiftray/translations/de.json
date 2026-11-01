@@ -488,5 +488,8 @@
  "{change}% in {months} months": "{change}% in {months} Monaten",
  "External monitor": "Externer Monitor",
  "Turn on": "Einschalten",
- "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "Der Monitor an {port} zeigt nichts: Der Anschluss hängt an der NVIDIA-GPU, und KDE startete, als sie aus war (Eco). Ohne Abmelden einschalten?"
+ "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "Der Monitor an {port} zeigt nichts: Der Anschluss hängt an der NVIDIA-GPU, und KDE startete, als sie aus war (Eco). Ohne Abmelden einschalten?",
+ "Fix": "Beheben",
+ "HDMI sound": "HDMI-Ton",
+ "No sound on the monitor or TV on {port}: the NVIDIA GPU's sound came up without access for you, so it is missing from the sound outputs. Fix it?": "Kein Ton am Monitor oder Fernseher an {port}: Der Ton der NVIDIA-GPU kam ohne Zugriff für Sie hoch und fehlt deshalb bei den Tonausgängen. Beheben?"
 }
