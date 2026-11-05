@@ -139,8 +139,18 @@ def dark_monitors():
 
 
 def announce_gpu(card):
-    """Announces the dGPU again (a udev "add" event), so KWin picks it up without a logout (one password)."""
-    return run("pkexec", "udevadm", "trigger", "--action=add", card, timeout=120)
+    """Announces the dGPU again (a udev "add" event), so KWin picks it up without a logout (one password).
+    Its sound card was hidden at login the same way (Cardwire hides the whole dGPU in Eco, so logind
+    gave the user no access to it), so it is announced again too, and the sound restarted to see it."""
+    sound = dgpu_sound_card()
+    if not sound:
+        return run("pkexec", "udevadm", "trigger", "--action=add", card, timeout=120)
+    script = (f"udevadm trigger --action=add {shlex.quote(card)} && "
+              f"udevadm trigger --action=change --parent-match={shlex.quote(sound)} && udevadm settle")
+    ok, out = run("pkexec", "sh", "-c", script, timeout=120)
+    if ok:
+        restart_sound()
+    return ok, out
 
 
 def dgpu_sound_card():
@@ -167,14 +177,20 @@ def mute_monitors():
 
 def unmute_monitors(card):
     """Announces the NVIDIA sound card again, so logind gives the user access to it (one password),
-    then WirePlumber looks at the sound cards again. Easy Effects loses its links when WirePlumber
-    restarts and plays into nothing, so it is restarted too when it runs as a service."""
+    then WirePlumber looks at the sound cards again."""
     ok, out = run("pkexec", "udevadm", "trigger", "--action=change", "--parent-match=" + card, timeout=120)
     if ok:
         run("udevadm", "settle", timeout=10)
-        run("systemctl", "--user", "restart", "wireplumber", timeout=30)
-        run("systemctl", "--user", "try-restart", "easyeffects.service", timeout=30)
+        restart_sound()
     return ok, out
+
+
+def restart_sound():
+    """WirePlumber looks at the sound cards again. Easy Effects loses its links when WirePlumber
+    restarts and plays into nothing, so it is restarted after it when it runs as a service."""
+    run("systemctl", "--user", "restart", "wireplumber", timeout=30)
+    time.sleep(3)  # the HDMI output shows up once the monitor's picture is on
+    run("systemctl", "--user", "try-restart", "easyeffects.service", timeout=30)
 
 
 def gpu_supported():
