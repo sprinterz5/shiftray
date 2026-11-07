@@ -1,5 +1,5 @@
 Name:           shiftray
-Version:        0.13.1
+Version:        0.13.2
 Release:        1%{?dist}
 Summary:        asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops
 
@@ -64,6 +64,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_udevrulesdir}/70-%{name}.rules
 
 %changelog
+* Sat Nov 07 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.13.2-1
+- Sound over HDMI on the NVIDIA GPU comes back from a notification
+
 * Tue Oct 27 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.13.1-1
 - HDMI on the dGPU turns on without a logout; iGPU memory sizes are right
 

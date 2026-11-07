@@ -76,6 +76,9 @@
   </provides>
 
   <releases>
+    <release version="0.13.2" date="2026-11-07">
+      <description><p>A monitor or TV on the NVIDIA GPU's HDMI port that has a picture but no sound (the laptop started in Eco) gets it back from a notification, with one password. Turn on for a dark monitor brings its sound back too.</p></description>
+    </release>
     <release version="0.13.1" date="2026-10-27">
       <description><p>A monitor on the NVIDIA GPU's HDMI port that shows nothing after KDE started in Eco can be turned on from a notification, without logging out. The iGPU memory choices show the right sizes.</p></description>
     </release>

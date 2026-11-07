@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.2
 - **HDMI sound on the NVIDIA GPU**: after Eco → Standard the NVIDIA sound card sometimes came up
   without access for the user, so the TV or monitor had a picture but was missing from the sound
   outputs. A notification now offers **Fix**: the card is announced again and WirePlumber restarted.
