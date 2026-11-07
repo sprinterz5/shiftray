@@ -24,6 +24,7 @@ OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linu
 TERRA_INSTALL = ("dnf install -y --nogpgcheck --repofrompath "
                  "'terra,https://repos.fyralabs.com/terra$releasever' terra-release")
 NVIDIA_HOWTO = "https://rpmfusion.org/Howto/NVIDIA"
+CARDWIRE_RELEASES = "https://api.github.com/repos/OpenGamingCollective/cardwire/releases/latest"
 CARDWIRE_DOCS = "https://opengamingcollective.github.io/cardwire/getting-started/installation.html"
 ASUS_LINUX = "https://asus-linux.org/guides/"
 
@@ -90,12 +91,27 @@ def checks():
     rows.append(check("asusd", "asusd (modes, fans, keyboard, battery)", asusd, REQUIRED,
                       "" if asusd else "asusctl is missing or its service is not running."))
     if has_dgpu():
-        bpf = "bpf" in (hw._read("/sys/kernel/security/lsm") or "").split(",")
+        bpf = hw.bpf_lsm()
+        bpf_soon = not bpf and system_changes.bpf_lsm_pending()  # set up, waiting for the restart
+        if not bpf:
+            fixable = hw.bpf_lsm_fixable()
+            rows.append(check("bpf_lsm", "BPF LSM (kernel option for Cardwire)", bpf_soon, RECOMMENDED,
+                              "Set up: works after the next restart." if bpf_soon else
+                              "Cardwire blocks the NVIDIA GPU through it. Ubuntu and Debian build it into the "
+                              "kernel but leave it off: adds bpf to the lsm= boot option. Works after a restart."
+                              if fixable else
+                              tr("The kernel runs without BPF LSM, which Cardwire needs: see {url}", url=CARDWIRE_DOCS),
+                              fix=fixable))
+            bpf = fixable or bpf_soon  # Cardwire can be installed now and starts after the restart
         old = service_active("supergfxd")
         gfx = shutil.which("cardwire") is not None and service_active("cardwired") and not old
+        if bpf_soon and shutil.which("cardwire") is not None:
+            gfx = True  # installed; cardwired starts once the kernel has BPF LSM
         detail = ("" if gfx else
                   "Replaces supergfxd, which asus-linux retired: Eco and Standard switch at once, "
-                  "without a logout." if old else "Needed for Eco / Standard.")
+                  "without a logout." if old else
+                  "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb)."
+                  if family == "debian" else "Needed for Eco / Standard.")
         if not bpf:
             detail = tr("The kernel runs without BPF LSM, which Cardwire needs: see {url}", url=CARDWIRE_DOCS)
         rows.append(check("cardwire", "Cardwire (GPU modes)", gfx, RECOMMENDED, detail, fix=bpf))
@@ -151,7 +167,9 @@ def checks():
 
 def todo_changes(todo):
     """Setup rows to fix -> the system_changes keys they make."""
-    keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost")}
+    keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost", "bpf_lsm")}
+    if "cardwire" in todo and distro() == "debian":
+        keys.add("cardwire_deb")
     if "tray" in todo:
         keys.add("gnome_tray")
     keys |= {"stopped:" + k.split(":", 1)[1] for k in todo if k.startswith("conflict:")}
@@ -168,6 +186,25 @@ def tray_package(todo):
 def packages_of(todo):
     names = {"asusd": ["asusctl"], "python": ["python3-evdev", "python3-dbus"], "swayidle": ["swayidle"]}
     return [p for k in sorted(todo) for p in names.get(k, [])]
+
+
+def cardwire_deb_lines():
+    """Debian and Ubuntu have no Cardwire package: the .deb of its latest stable release, from
+    Cardwire's own GitHub page (as its guide says), installed with apt so apt can remove it."""
+    return [
+        "if ! command -v cardwire >/dev/null; then",
+        "  fetch() { curl -fsSL \"$1\" 2>/dev/null || wget -qO- \"$1\"; }",
+        f"  url=$(fetch {CARDWIRE_RELEASES} | grep -o \"https://[^\\\"]*_$(dpkg --print-architecture)\\.deb\" | head -1)",
+        "  tmp=$(mktemp -d)",
+        "  if [ -n \"$url\" ] && echo \"$url\" && fetch \"$url\" > \"$tmp/cardwire.deb\" && [ -s \"$tmp/cardwire.deb\" ]; then",
+        "    chmod 755 \"$tmp\"; chmod 644 \"$tmp/cardwire.deb\"  # apt's _apt user reads it",
+        "    apt-get install -y \"$tmp/cardwire.deb\" || exit 1",
+        "  else",
+        f"    echo 'Cardwire could not be downloaded: install the .deb from its releases page, see {CARDWIRE_DOCS}'",
+        "  fi",
+        "  rm -rf \"$tmp\"",
+        "fi",
+    ]
 
 
 def needs_setup(rows):
@@ -217,7 +254,9 @@ def script(rows):
         if "asusd" in todo:
             lines += [f"echo 'asusctl is not packaged here: see {ASUS_LINUX}'"]
         if "cardwire" in todo and family == "debian":
-            lines += [f"command -v cardwire >/dev/null || echo 'Cardwire: install the .deb from its releases page, see {CARDWIRE_DOCS}'"]
+            lines += ["step 'Cardwire'", *cardwire_deb_lines()]
+    if "bpf_lsm" in todo:
+        lines += ["step 'BPF LSM (boot option)'", hw.bpf_lsm_script() + " || exit 1"]
     # restart, not just start: after an upgrade the old daemon would keep running
     if todo & {"asusd", "terra"}:
         lines += ["step 'asusd'", "systemctl enable asusd 2>/dev/null; systemctl restart asusd"]
@@ -232,6 +271,8 @@ def script(rows):
                   "  echo 1 > /sys/bus/pci/rescan",
                   "fi",
                   "command -v cardwire >/dev/null && { systemctl enable cardwired; systemctl restart cardwired; }"]
+        if not hw.bpf_lsm():
+            lines += ["echo 'Cardwire starts after the next restart, once the kernel runs BPF LSM.'"]
     if "keys" in todo:
         lines += ["step 'Laptop keys'", hotkeys.rule_script().rstrip("\n")]
     if "boost" in todo:
@@ -373,6 +414,9 @@ class SetupWindow(QtWidgets.QWidget):
                 system_changes.record(key, **({"names": self.packages} if key == "packages" else {}))
             if "tray" in self.todo and hw.gnome_tray() != "on":
                 self.log.appendPlainText("\n" + tr("Log out and back in once to see the icon in the top bar."))
+            if "bpf_lsm" in self.todo:
+                self.log.appendPlainText("\n" + tr("Restart the laptop once: the kernel runs BPF LSM from the "
+                                                    "next boot, and Cardwire starts with it."))
         self.later.setEnabled(True)
         self.later.setText(tr("Close"))
         if code in (126, 127):

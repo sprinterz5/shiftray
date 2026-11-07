@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- **Ubuntu and Debian: GPU modes from Setup.** The kernel there has BPF LSM built in but off, so
+  Cardwire could not run. Setup now adds bpf to the kernel's `lsm=` boot option (keeping the modules
+  it already runs; a GRUB drop-in, or grubby) and installs the `.deb` of Cardwire's latest release
+  from its GitHub page with apt; Cardwire starts after one restart. Both are in System changes:
+  the boot option with Undo, the package with `sudo apt remove cardwire`. A custom `lsm=` of your
+  own is left alone.
+
 ## 0.13.2
 - **HDMI sound on the NVIDIA GPU**: after Eco → Standard the NVIDIA sound card sometimes came up
   without access for the user, so the TV or monitor had a picture but was missing from the sound

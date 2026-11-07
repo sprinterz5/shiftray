@@ -491,5 +491,14 @@
  "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "El monitor en {port} no muestra nada: ese puerto está conectado a la GPU NVIDIA y KDE arrancó con ella apagada (Eco). ¿Activarlo sin cerrar sesión?",
  "Fix": "Arreglar",
  "HDMI sound": "Sonido HDMI",
- "No sound on the monitor or TV on {port}: the NVIDIA GPU's sound came up without access for you, so it is missing from the sound outputs. Fix it?": "Sin sonido en el monitor o TV de {port}: el sonido de la GPU NVIDIA apareció sin acceso para ti, así que falta en las salidas de sonido. ¿Arreglarlo?"
+ "No sound on the monitor or TV on {port}: the NVIDIA GPU's sound came up without access for you, so it is missing from the sound outputs. Fix it?": "Sin sonido en el monitor o TV de {port}: el sonido de la GPU NVIDIA apareció sin acceso para ti, así que falta en las salidas de sonido. ¿Arreglarlo?",
+ "Adds bpf to the lsm= option on the kernel command line (the security modules the kernel already ran stay as they were), so Cardwire can block the NVIDIA GPU in Eco. Ubuntu and Debian build BPF LSM into the kernel but leave it off. Takes effect after a restart.": "Añade bpf a la opción lsm= de la línea de comandos del kernel (los módulos de seguridad que el kernel ya usaba siguen igual), para que Cardwire pueda bloquear la GPU NVIDIA en Eco. Ubuntu y Debian incluyen BPF LSM en el kernel pero lo dejan apagado. Funciona tras reiniciar.",
+ "BPF LSM (kernel option for Cardwire)": "BPF LSM (opción del kernel para Cardwire)",
+ "BPF LSM (kernel option)": "BPF LSM (opción del kernel)",
+ "Cardwire blocks the NVIDIA GPU through it. Ubuntu and Debian build it into the kernel but leave it off: adds bpf to the lsm= boot option. Works after a restart.": "Cardwire bloquea la GPU NVIDIA a través de él. Ubuntu y Debian lo incluyen en el kernel pero lo dejan apagado: añade bpf a la opción de arranque lsm=. Funciona tras reiniciar.",
+ "Cardwire package (.deb)": "Paquete de Cardwire (.deb)",
+ "Debian and Ubuntu have no Cardwire package: Setup installs the .deb of its latest release from Cardwire's GitHub page, with apt. It does not update with the system: Setup or the releases page has newer ones.": "Debian y Ubuntu no tienen paquete de Cardwire: Setup instala con apt el .deb de su última versión desde la página de GitHub de Cardwire. No se actualiza con el sistema: hay versiones nuevas en Setup o en la página de versiones.",
+ "Restart the laptop once: the kernel runs BPF LSM from the next boot, and Cardwire starts with it.": "Reinicia el portátil una vez: el kernel usará BPF LSM desde el próximo arranque, y Cardwire arrancará con él.",
+ "Set up: works after the next restart.": "Configurado: funciona tras el próximo reinicio.",
+ "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb).": "Necesario para Eco / Standard. Se instala desde la página de versiones de Cardwire (.deb)."
 }

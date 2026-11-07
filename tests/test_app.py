@@ -27,11 +27,33 @@ class SetupScript(unittest.TestCase):
         with mock.patch.object(setup, "distro", return_value="fedora"):
             self.assertNotIn("dnf", setup.script([]))
 
+    def test_ubuntu_steps(self):
+        """Ubuntu: bpf added to the kernel's own LSM list through a GRUB drop-in, Cardwire's .deb with apt."""
+        with mock.patch.object(setup, "distro", return_value="debian"), \
+                mock.patch.object(setup.hw, "bpf_lsm", return_value=False), \
+                mock.patch.object(setup.hw.system, "_read", return_value="lockdown,capability,yama,apparmor"), \
+                mock.patch.object(setup.hw.system.shutil, "which", side_effect=lambda n: n == "update-grub"):
+            text = setup.script(self.rows("bpf_lsm", "cardwire"))
+            self.assertIn("cardwire_deb", setup.todo_changes({"cardwire"}))
+        for part in ("lsm=lockdown,capability,yama,apparmor,bpf", "/etc/default/grub.d/shiftray-bpf-lsm.cfg",
+                     "update-grub", "releases/latest", "dpkg --print-architecture", "apt-get install -y",
+                     "after the next restart"):
+            self.assertIn(part, text)
+
+    def test_bpf_lsm_left_alone_with_the_users_own_lsm(self):
+        files = {"/proc/cmdline": "root=/dev/sda1 lsm=landlock,apparmor", setup.hw.LSM: "landlock,apparmor"}
+        with mock.patch.object(setup.hw.system, "_read", side_effect=lambda p, *d: files.get(p)), \
+                mock.patch.object(setup.hw.system.shutil, "which", return_value="/usr/sbin/update-grub"):
+            self.assertFalse(setup.hw.bpf_lsm_fixable())
+            files["/proc/cmdline"] = "root=/dev/sda1 quiet"
+            self.assertTrue(setup.hw.bpf_lsm_fixable())
+
     def test_every_root_step_is_a_listed_change(self):
         """Setup may only do what System changes can show (and mostly undo)."""
         keys = {c.key for c in sc.changes()}
-        self.assertTrue(setup.todo_changes({"terra", "asusd", "python", "swayidle", "cardwire", "ppd",
-                                            "keys", "boost"}) <= keys)
+        with mock.patch.object(setup, "distro", return_value="debian"):
+            self.assertTrue(setup.todo_changes({"terra", "asusd", "python", "swayidle", "cardwire", "ppd",
+                                                "keys", "boost", "bpf_lsm"}) <= keys)
 
 
 class SystemChanges(unittest.TestCase):

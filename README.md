@@ -186,7 +186,7 @@ Needs Python 3 with PySide6, python-evdev and dbus-python. Build the AppImage wi
 | Needs | |
 |---|---|
 | **Laptop** | An ASUS laptop supported by [asusctl](https://asus-linux.org), ROG and TUF first of all |
-| **GPU modes** | [Cardwire](https://opengamingcollective.github.io/cardwire/) and a kernel with BPF LSM (Fedora and Arch have it; Ubuntu needs a boot option). Laptops with only an integrated GPU (Strix Halo, Zenbook, Vivobook) need neither: the GPU block is hidden |
+| **GPU modes** | [Cardwire](https://opengamingcollective.github.io/cardwire/) and a kernel with BPF LSM (Fedora and Arch have it; on Ubuntu and Debian Setup adds the boot option and installs Cardwire's .deb, then one restart). Laptops with only an integrated GPU (Strix Halo, Zenbook, Vivobook) need neither: the GPU block is hidden |
 | **NVIDIA driver** | Optional: for games on the dGPU and its temperature |
 
 | Desktop | Status |
@@ -284,9 +284,10 @@ it. Close it, or turn on **Extra → Stop all apps using GPU when switching to E
 <details>
 <summary><b>A red line says asusd or cardwired is not running</b></summary>
 
-Click it to start the service. If that does not help, open **Extra → Setup**. On Ubuntu the
-kernel starts without BPF LSM, which Cardwire needs; see
-[Cardwire's docs](https://opengamingcollective.github.io/cardwire/).
+Click it to start the service. If that does not help, open **Extra → Setup**. On Ubuntu and
+Debian the kernel starts without BPF LSM, which Cardwire needs: Setup adds it to the boot options
+(listed in Extra → System changes, with Undo) and Cardwire starts after one restart. asusctl itself
+has no Ubuntu package yet; see [asus-linux.org](https://asus-linux.org/guides/).
 </details>
 
 <details>

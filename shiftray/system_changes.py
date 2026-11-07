@@ -101,6 +101,16 @@ def _cardwire_applied():
     return hw.run("systemctl", "is-enabled", "--quiet", "cardwired", timeout=5)[0]
 
 
+def bpf_lsm_pending():
+    """lsm= with bpf is set for the next boot (GRUB drop-in, or grubby's kernel entries)."""
+    if os.path.exists(hw.BPF_LSM_GRUB):
+        return True
+    if "bpf_lsm" not in journal() or not shutil.which("grubby"):
+        return False
+    ok, out = hw.run("grubby", "--info=DEFAULT", timeout=5)
+    return ok and any("lsm=" in a and "bpf" in a for a in out.split())
+
+
 def _kde_profiles_undo():
     """KDE's own power profile choice for AC and battery comes back (the value it had before)."""
     before = journal().get("kde_profiles", {}).get("before", {})
@@ -180,10 +190,22 @@ def changes():
                   "the GPU. On Fedora Cardwire also replaces switcheroo-control."),
                MEDIUM, True, _cardwire_applied,
                manual="sudo systemctl disable --now cardwired && sudo systemctl enable --now supergfxd"),
+        Change("bpf_lsm", tr("BPF LSM (kernel option)"),
+               tr("Adds bpf to the lsm= option on the kernel command line (the security modules the kernel "
+                  "already ran stay as they were), so Cardwire can block the NVIDIA GPU in Eco. Ubuntu and "
+                  "Debian build BPF LSM into the kernel but leave it off. Takes effect after a restart."),
+               HIGH, True, lambda: "bpf_lsm" in journal() or bpf_lsm_pending(), undo_root=hw.BPF_LSM_UNDO),
+        Change("cardwire_deb", tr("Cardwire package (.deb)"),
+               tr("Debian and Ubuntu have no Cardwire package: Setup installs the .deb of its latest release "
+                  "from Cardwire's GitHub page, with apt. It does not update with the system: Setup or the "
+                  "releases page has newer ones."),
+               MEDIUM, True, lambda: "cardwire_deb" in journal() and shutil.which("cardwire") is not None,
+               manual="sudo apt remove cardwire"),
         Change("packages", tr("Installed packages"),
                tr("asusctl, python3-evdev / python3-dbus, swayidle, GNOME's AppIndicator extension, as needed. Nothing else depends on the app."),
                LOW, True, lambda: "packages" in journal(),
-               manual=lambda: "sudo dnf remove " + " ".join(journal().get("packages", {}).get("names", []))),
+               manual=lambda: ("sudo dnf remove " if shutil.which("dnf") else "sudo pacman -R " if shutil.which("pacman")
+                              else "sudo apt remove ") + " ".join(journal().get("packages", {}).get("names", []))),
     ]
     if kde:
         rows += [

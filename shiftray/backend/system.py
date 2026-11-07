@@ -37,6 +37,37 @@ def set_deep_sleep(on):
     return run("pkexec", "sh", "-c", f"echo {mode} > {MEM_SLEEP} && {boot}", timeout=120)
 
 
+LSM = "/sys/kernel/security/lsm"
+BPF_LSM_GRUB = "/etc/default/grub.d/shiftray-bpf-lsm.cfg"
+
+
+def bpf_lsm():
+    """The kernel runs the BPF LSM, which Cardwire needs. Fedora and Arch turn it on; Ubuntu and
+    Debian build it but leave it out of the kernel's list, so it takes an lsm= boot option."""
+    return "bpf" in (_read(LSM) or "").split(",")
+
+
+def bpf_lsm_fixable():
+    """lsm= can be set here: GRUB through grubby or update-grub, and no lsm= of the user's own
+    on the command line (Undo removes the option, which would lose theirs)."""
+    own = any(a.startswith("lsm=") for a in (_read("/proc/cmdline") or "").split())
+    return not own and bool(_read(LSM)) and bool(shutil.which("grubby") or shutil.which("update-grub"))
+
+
+def bpf_lsm_script():
+    """Root lines adding bpf to the security modules the kernel runs now (lsm= replaces the
+    kernel's default list, so the current one is kept as it is). Takes effect at the next boot."""
+    lsm = ",".join([m for m in (_read(LSM) or "").split(",") if m] + ["bpf"])
+    if shutil.which("grubby"):
+        return f"grubby --update-kernel=ALL --args=lsm={lsm}"
+    return (f"mkdir -p /etc/default/grub.d && echo 'GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB_CMDLINE_LINUX_DEFAULT "
+            f"lsm={lsm}\"' > {BPF_LSM_GRUB} && update-grub")
+
+
+BPF_LSM_UNDO = ("if command -v grubby >/dev/null; then grubby --update-kernel=ALL --remove-args=lsm; "
+                f"elif [ -e {BPF_LSM_GRUB} ]; then rm -f {BPF_LSM_GRUB} && update-grub; fi")
+
+
 def cpu_name():
     for line in (_read("/proc/cpuinfo", "") or "").splitlines():
         if line.startswith("model name"):
