@@ -30,6 +30,29 @@ def set_aura(effect, colour, speed="med"):
 
 
 AURA_SPEEDS = ["low", "med", "high"]
+# asusd's AuraModeNum values for the effects the app offers
+AURA_MODE_NUMS = {"static": 0, "breathe": 1, "rainbow-cycle": 2, "pulse": 10}
+_aura_modes = []
+
+
+def aura_modes():
+    """The effects asusd allows on this laptop (its SupportedBasicModes, from aura_support.ron),
+    or None when it cannot be asked. A model missing from that file gets Static only, and asusd
+    ignores the other effects, so they are not offered. Asked once: it does not change while asusd runs."""
+    if _aura_modes:
+        return _aura_modes[0]
+    ok, out = run("busctl", "--system", "--list", "tree", "xyz.ljones.Asusd", timeout=5)
+    paths = re.findall(r"/xyz/ljones/aura/\S+", out) if ok else []
+    if not paths:
+        return None
+    ok, out = run("busctl", "--system", "get-property", "xyz.ljones.Asusd", paths[0], "xyz.ljones.Aura",
+                  "SupportedBasicModes", timeout=5)
+    m = re.match(r"au \d+((?: \d+)*)", out.strip()) if ok else None
+    if not m:
+        return None
+    nums = {int(n) for n in m.group(1).split()}
+    _aura_modes.append([k for k, n in AURA_MODE_NUMS.items() if n in nums] or ["static"])
+    return _aura_modes[0]
 
 
 def _aura_config():

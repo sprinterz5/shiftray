@@ -138,6 +138,8 @@ from .keyboard import (  # noqa: F401
     set_kbd_level,
     set_aura,
     AURA_SPEEDS,
+    AURA_MODE_NUMS,
+    aura_modes,
     _aura_config,
     get_aura_power,
     set_aura_power,

@@ -270,5 +270,23 @@ class MuteMonitors(unittest.TestCase):
         self.assertEqual(self.run_with(exists=False), [])   # no sound card node (Eco)
 
 
+class AuraModes(unittest.TestCase):
+    """asusd's SupportedBasicModes: a model missing from aura_support.ron gets Static only (issue #1)."""
+
+    def modes(self, reply):
+        from shiftray.backend import keyboard
+        keyboard._aura_modes.clear()
+        tree = (True, "/\n/xyz/ljones/aura\n/xyz/ljones/aura/tuf\n")
+        with mock.patch.object(keyboard, "run", side_effect=[tree, reply]):
+            return keyboard.aura_modes()
+
+    def test_supported_modes(self):
+        self.assertEqual(self.modes((True, "au 5 0 1 2 3 10")), ["static", "breathe", "rainbow-cycle", "pulse"])
+        self.assertEqual(self.modes((True, "au 1 0")), ["static"])
+
+    def test_unknown(self):
+        self.assertIsNone(self.modes((False, "")))
+
+
 if __name__ == "__main__":
     unittest.main()

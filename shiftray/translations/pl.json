@@ -500,5 +500,6 @@
  "Debian and Ubuntu have no Cardwire package: Setup installs the .deb of its latest release from Cardwire's GitHub page, with apt. It does not update with the system: Setup or the releases page has newer ones.": "Debian i Ubuntu nie mają pakietu Cardwire: Setup instaluje przez apt plik .deb najnowszego wydania ze strony Cardwire na GitHubie. Nie aktualizuje się z systemem: nowsze są w Setup lub na stronie wydań.",
  "Restart the laptop once: the kernel runs BPF LSM from the next boot, and Cardwire starts with it.": "Uruchom laptop ponownie raz: jądro włączy BPF LSM od następnego rozruchu, a z nim Cardwire.",
  "Set up: works after the next restart.": "Skonfigurowano: zadziała po następnym ponownym uruchomieniu.",
- "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb).": "Potrzebny do Eco / Standard. Instalowany ze strony wydań Cardwire (.deb)."
+ "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb).": "Potrzebny do Eco / Standard. Instalowany ze strony wydań Cardwire (.deb).",
+ "asusd allows only Static on this laptop: {model} is not in its list of keyboard effects (aura_support.ron) yet.": "asusd pozwala na tym laptopie tylko na Statyczny: modelu {model} nie ma jeszcze na jego liście efektów klawiatury (aura_support.ron)."
 }

@@ -13,7 +13,7 @@ from . import backend as hw
 from . import hotkeys
 from . import modes
 from . import shortcuts
-from .extra import AURA
+from .extra import AURA, aura_choices
 from .i18n import tr
 
 
@@ -168,7 +168,7 @@ class KeysMixin:
             except OSError:
                 pass
         if action == "aura":
-            keys = [k for k, _ in AURA]
+            keys = [k for k, _ in aura_choices()]
             current = self.cfg.get("aura_effect", "static")
             self.cfg["aura_effect"] = keys[(keys.index(current) + 1) % len(keys)] if current in keys else keys[0]
             self.apply_aura()

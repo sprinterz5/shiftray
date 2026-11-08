@@ -694,7 +694,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         self.on_power_source(ac)
         self.restore_kbd_level(ac)
         if self.cfg.get("aura_effect") and not os.path.exists(hw.KBD_IDLE_FILE):
-            self.bg(hw.set_aura, self.cfg["aura_effect"], self.cfg.get("aura_colour", "ffffff"),
+            self.bg(hw.set_aura, self.aura_effect(), self.cfg.get("aura_colour", "ffffff"),
                     self.cfg.get("aura_speed", "med"))
         self.refresh_fast()
 
@@ -1584,10 +1584,16 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
             if visible:
                 self.show()
 
+    def aura_effect(self):
+        """The effect in cfg, or Static where asusd does not allow it (an older choice, another laptop)."""
+        effect = self.cfg.get("aura_effect", "static")
+        allowed = hw.aura_modes()
+        return effect if allowed is None or effect in allowed else "static"
+
     def apply_aura(self):
         """The keyboard effect, colour and speed in cfg (set in Extra or by the Fn+F4 action)."""
         save_config(self.cfg)
-        self.bg(hw.set_aura, self.cfg.get("aura_effect", "static"), self.cfg.get("aura_colour", "ffffff"),
+        self.bg(hw.set_aura, self.aura_effect(), self.cfg.get("aura_colour", "ffffff"),
                 self.cfg.get("aura_speed", "med"), then=lambda r: self.report(r, tr("Keyboard lighting")))
 
     def on_limit(self, percent):

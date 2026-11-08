@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Keyboard effects asusd does not allow are no longer offered** (issue #1, TUF A16 FA608UM): a
+  model missing from asusd's `aura_support.ron` gets Static only, and asusd ignored Breathe, Rainbow
+  and Strobe without a word. Extra lists only the effects asusd reports and says why; Fn+F4 walks
+  through those; an effect chosen before falls back to Static.
 - **Ubuntu and Debian: GPU modes from Setup.** The kernel there has BPF LSM built in but off, so
   Cardwire could not run. Setup now adds bpf to the kernel's `lsm=` boot option (keeping the modules
   it already runs; a GRUB drop-in, or grubby) and installs the `.deb` of Cardwire's latest release

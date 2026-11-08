@@ -500,5 +500,6 @@
  "Debian and Ubuntu have no Cardwire package: Setup installs the .deb of its latest release from Cardwire's GitHub page, with apt. It does not update with the system: Setup or the releases page has newer ones.": "Debian 和 Ubuntu 没有 Cardwire 软件包：Setup 从 Cardwire 的 GitHub 页面下载最新版本的 .deb，并用 apt 安装。它不会随系统更新：新版本可在 Setup 或发布页面获取。",
  "Restart the laptop once: the kernel runs BPF LSM from the next boot, and Cardwire starts with it.": "请重启笔记本一次：内核将从下次启动起运行 BPF LSM，Cardwire 也会随之启动。",
  "Set up: works after the next restart.": "已设置：下次重启后生效。",
- "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb).": "Eco / Standard 所需。从 Cardwire 的发布页面安装（.deb）。"
+ "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb).": "Eco / Standard 所需。从 Cardwire 的发布页面安装（.deb）。",
+ "asusd allows only Static on this laptop: {model} is not in its list of keyboard effects (aura_support.ron) yet.": "asusd 在这台笔记本上只允许“静态”：{model} 还不在它的键盘效果列表（aura_support.ron）中。"
 }
