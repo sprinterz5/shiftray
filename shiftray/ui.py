@@ -1383,7 +1383,11 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
                 if reboot:
                     subprocess.Popen(["systemctl", "reboot"])
             elif mode == "Hybrid":
-                QtCore.QTimer.singleShot(3000, self.check_monitors)  # a monitor waiting on the dGPU
+                # a monitor waiting on the dGPU; told again even if told before (the switch may be
+                # the user's way of asking for that picture)
+                self.monitors_told.clear()
+                self.sound_told.clear()
+                QtCore.QTimer.singleShot(3000, self.check_monitors)
             self.refresh_slow()
 
         def job():
