@@ -1598,7 +1598,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         """The effect in cfg, or Static where asusd does not allow it (an older choice, another laptop)."""
         effect = self.cfg.get("aura_effect", "static")
         if effect == "music":
-            return effect if hw.music_possible() else "static"
+            return effect if self.cfg.get("music_enabled") and hw.music_possible() else "static"
         allowed = hw.aura_modes()
         return effect if allowed is None or effect in allowed else "static"
 
@@ -1614,29 +1614,17 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
 
     def start_music(self):
         """The Music effect: the keyboard color follows the sound. It writes the color itself (not
-        through asusd), which needs Setup's permission once; asked here when it is missing."""
+        through asusd), with the permission asked for when Music is turned on in Extra. Runs only
+        while Music is the chosen effect: nothing in the background otherwise."""
         if self.music and self.music.is_alive():
             self.music.set_idle(self.cfg.get("aura_colour", "ffffff"))  # a new color chosen
             return
-        if not hw.music_writable():
-            answer = QtWidgets.QMessageBox.question(self, NAME, tr(
-                "The Music effect sets the keyboard color many times a second, which needs a permission "
-                "for your user once (a udev rule; Extra → System changes can undo it). Allow it now? "
-                "It asks for your password."))
-            if answer != QtWidgets.QMessageBox.Yes:
-                self.cfg["aura_effect"] = "static"
-                save_config(self.cfg)
-                if self.extra is not None:
-                    self.extra.show_aura()
-                self.apply_aura()
-                return
-
-            def allowed(result):
-                if result[0] and hw.music_writable():
-                    self.start_music()
-                else:
-                    self.report(result, tr("Keyboard lighting"))
-            self.bg(hw.run, "pkexec", "sh", "-c", hw.music_access_script(), then=allowed)
+        if not hw.music_writable():  # the permission went away (System changes → Undo)
+            log.warning("Music effect: no permission for the keyboard color, Static instead")
+            self.cfg["aura_effect"] = "static"
+            if self.extra is not None:
+                self.extra.show_aura()
+            self.apply_aura()
             return
         log.info("keyboard lighting: Music")
         self.music = hw.MusicLights(self.cfg.get("aura_colour", "ffffff"), log=log.warning)

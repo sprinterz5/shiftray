@@ -26,11 +26,13 @@ AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", 
         ("music", tr("Music"))]
 
 
-def aura_choices():
-    """AURA without the effects asusd does not allow on this model (all when it cannot be asked)."""
+def aura_choices(cfg=None):
+    """AURA without the effects asusd does not allow on this model (all when it cannot be asked).
+    Music only once it is turned on in Extra (cfg music_enabled): it costs CPU and battery while it
+    runs, so it is not one more stop in Fn+F4's round for everyone."""
     allowed = hw.aura_modes()
-    return [(k, label) for k, label in AURA
-            if (hw.music_possible() if k == "music" else allowed is None or k in allowed)]
+    music = bool(cfg and cfg.get("music_enabled")) and hw.music_possible()
+    return [(k, label) for k, label in AURA if (music if k == "music" else allowed is None or k in allowed)]
 
 
 SPEEDS = [("low", tr("Slow")), ("med", tr("Normal")), ("high", tr("Fast"))]
@@ -166,8 +168,7 @@ class ExtraWindow(QtWidgets.QWidget):
         self.aura_combo = w.RComboBox()
         self.aura_combo.setFixedWidth(146)
         self.aura_combo.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        for key, label in aura_choices():
-            self.aura_combo.addItem(label, key)
+        self.fill_aura_combo()
         self.aura_combo.activated.connect(self.on_effect)
         effect_row.addWidget(self.aura_combo)
         self.colour_button = w.ColorButton(tr("Color"), "#" + self.cfg.get("aura_colour", "ffffff"), radius=2)
@@ -184,6 +185,19 @@ class ExtraWindow(QtWidgets.QWidget):
             note.setContentsMargins(6, 0, 6, 2)
             bl.addWidget(note)
         self.show_aura()
+        if hw.music_possible():
+            self.music_box = check(tr("Music effect: the keyboard follows the sound"))
+            self.music_box.setChecked(bool(self.cfg.get("music_enabled")))
+            self.music_box.toggled.connect(self.on_music)
+            bl.addWidget(self.music_box)
+            note = QtWidgets.QLabel(tr(
+                "Adds Music to the effects and to Fn+F4. While Music is the chosen effect it uses about 5-10% "
+                "of one CPU core, 10 MB of memory and a brightly flashing backlight, so it drains the battery "
+                "faster. Not chosen, it costs nothing."))
+            note.setObjectName("tip")
+            note.setWordWrap(True)
+            note.setContentsMargins(6, 0, 6, 4)
+            bl.addWidget(note)
         self.awake = check(tr("Awake"))
         self.boot = check(tr("Boot/Shutdown"))
         self.sleep = check(tr("Sleep"))
@@ -636,6 +650,37 @@ class ExtraWindow(QtWidgets.QWidget):
     def on_power(self):
         self.main.bg(hw.set_aura_power, self.awake.isChecked(), self.boot.isChecked(),
                      self.sleep.isChecked(), then=lambda r: self.main.report(r, tr("Backlight power")))
+
+    def fill_aura_combo(self):
+        self.aura_combo.clear()
+        for key, label in aura_choices(self.cfg):
+            self.aura_combo.addItem(label, key)
+
+    def on_music(self, on):
+        if on and not hw.music_writable():
+            answer = QtWidgets.QMessageBox.question(self, tr("Music effect"), tr(
+                "The Music effect sets the keyboard color many times a second, which needs a permission "
+                "for your user once (a udev rule; Extra → System changes can undo it). Allow it now? "
+                "It asks for your password."))
+            if answer != QtWidgets.QMessageBox.Yes:
+                self.music_box.setChecked(False)
+                return
+
+            def allowed(result):
+                if result[0] and hw.music_writable():
+                    self.on_music(True)
+                else:
+                    self.music_box.setChecked(False)
+                    self.main.report(result, tr("Music effect"))
+            self.main.bg(hw.run, "pkexec", "sh", "-c", hw.music_access_script(), then=allowed)
+            return
+        self.cfg["music_enabled"] = on
+        if not on and self.cfg.get("aura_effect") == "music":
+            self.cfg["aura_effect"] = "static"
+            self.main.apply_aura()  # stops it and puts Static back
+        self.main.save()
+        self.fill_aura_combo()
+        self.show_aura()
 
     def show_aura(self):
         """The effect in cfg, also after Fn+F4 changed it."""

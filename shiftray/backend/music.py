@@ -17,7 +17,7 @@ from .common import KBD_LED
 KBD_RGB = os.path.join(KBD_LED, "kbd_rgb_mode")
 MUSIC_RULE = "/etc/udev/rules.d/71-shiftray-kbd-color.rules"
 RATE = 11025
-FPS = 30
+FPS = 25  # each color is an ACPI call (~1.6 ms): the main cost, so no more than the eye needs
 SILENT = 300  # peak (16-bit samples) below which the sound counts as silence
 SILENT_AFTER = 1.0  # seconds of silence before the keyboard fades into the chosen color
 
@@ -82,6 +82,8 @@ class Analyzer:
         self.tempo = 1.0  # beats a second
         self.phase = 0.0  # where on the palette
         self.fade = 1.0  # 1 = all idle color, 0 = all music
+        self.shown = 0.0  # the brightness shown: follows level a little behind, so flashes are not hard cuts
+        self.hue = None
         self.quiet = SILENT_AFTER
 
     def frame(self, samples, seconds, idle=(255, 255, 255)):
@@ -111,21 +113,26 @@ class Analyzer:
             self.tone += slow * (share - self.tone)
             self.energy += slow * (loud / (self.loud_peak + 1) - self.energy)
             beat = min(1.0, max(0.0, (bass / (self.bass_avg + 1) - 1.0) / 0.5))
-            if beat > 0.5 and self.beat < 0.25:  # a new beat: to the other side of the palette
+            if beat > 0.5 and self.beat < 0.25:  # a new beat: a step across the palette
                 self.tempo += 1 / 4  # counted over the same 4 seconds -> beats a second
-                self.phase += 0.5
+                self.phase += 0.35
             self.beat = beat
             fast = min(1.0, self.tempo / 3)
-            self.level *= 0.86 - 0.1 * fast  # slow music: long fades; fast: short flashes
+            self.level *= 0.9 - 0.08 * fast  # slow music: long fades; fast: short flashes
             body = 0.04 + 0.16 * self.energy ** 1.5  # a dim glow between the beats: they must stand out
             self.level = max(self.level, min(1.0, 1.5 * beat), body)
             self.phase += seconds * (0.03 + 0.05 * fast)  # drifting through the palette
         # palette: centered on red (deep) ... blue (bright), 0.15 to each side
-        hue = ((0.62 * self.tone) + 0.2 * math.sin(2 * math.pi * (self.phase + 0.25)) - 0.05) % 1
+        target = ((0.62 * self.tone) + 0.2 * math.sin(2 * math.pi * (self.phase + 0.25)) - 0.05) % 1
+        if self.hue is None:
+            self.hue = target
+        self.hue = (self.hue + 0.3 * ((target - self.hue + 0.5) % 1 - 0.5)) % 1  # glides, the short way round
+        self.shown += (0.55 if self.level > self.shown else 0.35) * (self.level - self.shown)
+        hue = self.hue
         sat = 0.75 + 0.25 * self.energy  # calm parts a little paler
         step = seconds / 1.5 if self.quiet >= SILENT_AFTER else -seconds * 4
         self.fade = min(1.0, max(0.0, self.fade + step))
-        music = hsv(hue, min(1.0, self.level), sat)
+        music = hsv(hue, min(1.0, self.shown), sat)
         return tuple(round(m + (i - m) * self.fade) for m, i in zip(music, idle))
 
 
@@ -165,7 +172,7 @@ class MusicLights(threading.Thread):
                     break  # PipeWire restarted (wireplumber, a new output): start again
                 samples = array.array("h", data[:len(data) // 2 * 2])
                 color = analyzer.frame(samples, len(samples) / RATE, self.idle)
-                if shown and max(abs(a - b) for a, b in zip(color, shown)) < 4:
+                if shown and max(abs(a - b) for a, b in zip(color, shown)) < 12:  # too small to see
                     continue
                 try:
                     write_color(*color)

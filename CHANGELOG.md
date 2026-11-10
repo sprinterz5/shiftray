@@ -7,13 +7,15 @@
   stops and masks power-profiles-daemon / tuned-ppd instead, on every distribution (masked, because
   KDE's PowerDevil starts power-profiles-daemon again over D-Bus). KDE's power profile slider goes
   away with it; the app's modes replace it. Undo in System changes starts them again.
-- **Music keyboard effect** (Extra → Laptop Backlight, and Fn+F4): the keyboard flashes on the beat
-  of what the laptop plays and takes its colors from the character of the music: deep songs warm,
-  bright ones cool; calm parts glow softly, a chorus brighter; fast songs flash short, slow ones
-  breathe. In silence it fades into the chosen color. The color is written straight to asus-wmi,
-  without asusd saving it 30 times a second; that needs a udev rule once (one password, asked when
-  Music is first chosen or in Setup; System changes can undo it). The sound comes from the speakers'
-  output, never the microphone.
+- **Music keyboard effect**, turned on in Extra → Laptop Backlight (off by default): the keyboard
+  flashes on the beat of what the laptop plays and takes its colors from the character of the music:
+  deep songs warm, bright ones cool; calm parts glow softly, a chorus brighter; fast songs flash
+  short, slow ones breathe. In silence it fades into the chosen color. Once on, Music is one of the
+  effects and in Fn+F4's round; it runs only while it is the chosen effect (about 5-10% of one CPU
+  core and 10 MB, said next to the switch), and nothing at all otherwise. The color is written
+  straight to asus-wmi, without asusd saving it many times a second; that needs a udev rule, asked
+  for (one password) when Music is turned on, and System changes can undo it. The sound comes from
+  the speakers' output, never the microphone.
 - **Keyboard effects asusd does not allow are no longer offered** (issue #1, TUF A16 FA608UM): a
   model missing from asusd's `aura_support.ron` gets Static only, and asusd ignored Breathe, Rainbow
   and Strobe without a word. Extra lists only the effects asusd reports and says why; Fn+F4 walks

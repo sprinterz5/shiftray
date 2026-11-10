@@ -168,7 +168,7 @@ class KeysMixin:
             except OSError:
                 pass
         if action == "aura":
-            keys = [k for k, _ in aura_choices()]
+            keys = [k for k, _ in aura_choices(self.cfg)]
             current = self.cfg.get("aura_effect", "static")
             self.cfg["aura_effect"] = keys[(keys.index(current) + 1) % len(keys)] if current in keys else keys[0]
             self.apply_aura()

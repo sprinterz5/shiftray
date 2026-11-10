@@ -511,5 +511,8 @@
  "Power profile daemons masked (asusd only)": "Демоны профилей питания замаскированы (только asusd)",
  "asusd manages the power mode itself; power-profiles-daemon or TuneD next to it race over the platform profile and CPU EPP, so they are stopped and masked, as asusctl's guide says. Undo starts them again (KDE's power profile slider comes back with them).": "asusd сам управляет режимом питания; power-profiles-daemon или TuneD рядом с ним спорят за профиль платформы и EPP процессора, поэтому они остановлены и замаскированы, как советует гайд asusctl. Отмена запускает их снова (вместе с ними вернётся ползунок профиля питания в KDE).",
  "{names} sets the power mode too, and races asusd over the platform profile and CPU EPP (asusctl's guide). Turns it off and masks it, so KDE cannot start it again. KDE's battery applet then has no power profile slider: the app's modes take its place.": "{names} тоже задаёт режим питания и спорит с asusd за профиль платформы и EPP процессора (гайд asusctl). Отключает и маскирует его, чтобы KDE не запустил его снова. В апплете батареи KDE пропадёт ползунок профиля питания: его заменяют режимы приложения.",
- "Power profiles: asusd only": "Профили питания: только asusd"
+ "Power profiles: asusd only": "Профили питания: только asusd",
+ "Adds Music to the effects and to Fn+F4. While Music is the chosen effect it uses about 5-10% of one CPU core, 10 MB of memory and a brightly flashing backlight, so it drains the battery faster. Not chosen, it costs nothing.": "Добавляет «Музыку» в эффекты и в Fn+F4. Пока выбран этот эффект, он занимает около 5–10% одного ядра процессора, 10 МБ памяти и ярко мигающую подсветку, поэтому батарея садится быстрее. Если он не выбран, то ничего не тратит.",
+ "Music effect": "Эффект «Музыка»",
+ "Music effect: the keyboard follows the sound": "Эффект «Музыка»: клавиатура следует за звуком"
 }

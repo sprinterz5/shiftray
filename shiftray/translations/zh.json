@@ -511,5 +511,8 @@
  "Power profile daemons masked (asusd only)": "电源配置守护进程已屏蔽（仅 asusd）",
  "asusd manages the power mode itself; power-profiles-daemon or TuneD next to it race over the platform profile and CPU EPP, so they are stopped and masked, as asusctl's guide says. Undo starts them again (KDE's power profile slider comes back with them).": "asusd 自己管理电源模式；与之并存的 power-profiles-daemon 或 TuneD 会争夺平台配置文件和 CPU EPP，因此按照 asusctl 指南将其停止并屏蔽。撤销会再次启动它们（KDE 的电源配置滑块也会随之恢复）。",
  "{names} sets the power mode too, and races asusd over the platform profile and CPU EPP (asusctl's guide). Turns it off and masks it, so KDE cannot start it again. KDE's battery applet then has no power profile slider: the app's modes take its place.": "{names} 也会设置电源模式，并与 asusd 争夺平台配置文件和 CPU EPP（asusctl 指南）。将其关闭并屏蔽，使 KDE 无法再次启动它。KDE 的电池小程序将不再有电源配置滑块：由本应用的模式代替。",
- "Power profiles: asusd only": "电源配置：仅 asusd"
+ "Power profiles: asusd only": "电源配置：仅 asusd",
+ "Adds Music to the effects and to Fn+F4. While Music is the chosen effect it uses about 5-10% of one CPU core, 10 MB of memory and a brightly flashing backlight, so it drains the battery faster. Not chosen, it costs nothing.": "将“音乐”加入效果列表和 Fn+F4。选中“音乐”效果时，它约占用一个 CPU 核心的 5–10%、10 MB 内存，背光会强烈闪烁，因此电池消耗更快。未选中时不消耗任何资源。",
+ "Music effect": "音乐效果",
+ "Music effect: the keyboard follows the sound": "音乐效果：键盘随声音变化"
 }
