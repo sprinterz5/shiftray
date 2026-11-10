@@ -1,13 +1,17 @@
 """Keyboard color that follows the sound the laptop plays (the "Music" effect).
 
-The TUF keyboard is one zone: the whole keyboard pulses with the loudness, red for bass and
-blue-violet for treble. Colors go straight to asus-wmi's kbd_rgb_mode with the "don't save" flag:
-through asusd every change would also be written to its config file, 30 times a second. That file
-is root-only, so Setup adds a udev rule letting the user's group write it (music_access_script).
-The sound is what the default output plays (pw-record from the sink's monitor), never the mic."""
+The TUF keyboard is one zone: the whole keyboard flashes on the beat (Analyzer has the details).
+Colors go straight to asus-wmi's kbd_rgb_mode with the "don't save" flag: through asusd every change
+would also be written to its config file, many times a second. That file is root-only, so turning
+Music on adds a udev rule letting the user's group write it (music_access_script).
+The sound is what the default output plays (pw-record from the sink's monitor), never the mic.
+
+Nothing runs when there is nothing to show: with the backlight off, the lid closed or the screen
+locked it pauses, and after a while of silence it stops listening until something plays again."""
 import array
 import math
 import os
+import select
 import subprocess
 import threading
 import time
@@ -16,10 +20,15 @@ from .common import KBD_LED
 
 KBD_RGB = os.path.join(KBD_LED, "kbd_rgb_mode")
 MUSIC_RULE = "/etc/udev/rules.d/71-shiftray-kbd-color.rules"
-RATE = 11025
+RATE = 8000  # enough for bass and for treble up to 4 kHz; fewer samples to go through
 FPS = 25  # each color is an ACPI call (~1.6 ms): the main cost, so no more than the eye needs
 SILENT = 300  # peak (16-bit samples) below which the sound counts as silence
 SILENT_AFTER = 1.0  # seconds of silence before the keyboard fades into the chosen color
+SLEEP_AFTER = 10.0  # seconds of silence before it stops listening
+CHECK_EVERY = 2.0  # seconds between the checks for a paused state and for a new sound
+PROBE_EVERY = 20.0  # while asleep: listen this often for a moment (a stream that was silent, now not)
+STEP = 12  # smallest change of a color channel worth a firmware call
+LID = "/proc/acpi/button/lid"
 
 
 def music_possible():
@@ -47,6 +56,51 @@ MUSIC_UNDO = (f"rm -f {MUSIC_RULE} && udevadm control --reload && chgrp root {KB
 def write_color(r, g, b):
     with open(KBD_RGB, "w") as f:
         f.write(f"0 0 {r} {g} {b} 0")  # 0: don't save; mode 0: static
+
+
+def _read(path):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def pause_reason():
+    """Why there is nothing to show now, or None: backlight off (Fn or the idle timeout), lid
+    closed, screen locked. All cheap: two sysfs / procfs reads and one D-Bus property."""
+    if _read(os.path.join(KBD_LED, "brightness")) == "0":
+        return "backlight off"
+    try:
+        lids = os.listdir(LID)
+    except OSError:
+        lids = []
+    if any("closed" in (_read(os.path.join(LID, n, "state")) or "") for n in lids):
+        return "lid closed"
+    try:
+        out = subprocess.run(["busctl", "--system", "get-property", "org.freedesktop.login1",
+                              "/org/freedesktop/login1/session/auto", "org.freedesktop.login1.Session",
+                              "LockedHint"], capture_output=True, text=True, timeout=2).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        out = ""
+    return "screen locked" if out.strip() == "b true" else None
+
+
+def playing_streams():
+    """Ids of the streams that are playing (not paused), or None without pactl. A paused player
+    corks its stream; play uncorks it, which is what wakes a sleeping Music effect up."""
+    try:
+        out = subprocess.run(["pactl", "list", "sink-inputs"], capture_output=True, text=True, timeout=2,
+                             env=dict(os.environ, LC_ALL="C")).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    ids, current = set(), None
+    for line in out.splitlines():
+        if line.startswith("Sink Input #"):
+            current = line.split("#", 1)[1].strip()
+        elif line.strip() == "Corked: no" and current:
+            ids.add(current)
+    return ids
 
 
 def hsv(h, v, s=1.0):
@@ -137,14 +191,19 @@ class Analyzer:
 
 
 class MusicLights(threading.Thread):
-    """Runs until stop(); on silence and at the end the keyboard shows idle_color ('rrggbb')."""
+    """Runs until stop(); in silence, paused and at the end the keyboard shows idle_color ('rrggbb').
+    step: the smallest channel change written (STEP); bigger means fewer firmware calls, in steps."""
 
-    def __init__(self, idle_color, log=None):
+    def __init__(self, idle_color, log=None, step=STEP):
         super().__init__(daemon=True, name="music-lights")
         self.set_idle(idle_color)
         self.log = log
+        self.step = step
         self.stopping = threading.Event()
         self.proc = None
+        self.fd = None
+        self.shown = None
+        self.failures = 0
 
     def set_idle(self, color):
         self.idle = tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
@@ -154,42 +213,138 @@ class MusicLights(threading.Thread):
         if self.proc:
             self.proc.terminate()
 
+    # -- the keyboard ---------------------------------------------------------------
+    def show(self, color, force=False):
+        if not force and self.shown and max(abs(a - b) for a, b in zip(color, self.shown)) < self.step:
+            return
+        try:
+            if self.fd is None:
+                self.fd = os.open(KBD_RGB, os.O_WRONLY)  # kept open: one call per color, not three
+            os.write(self.fd, f"0 0 {color[0]} {color[1]} {color[2]} 0".encode())
+            self.shown, self.failures = color, 0
+        except OSError as err:  # asleep, or the permission went away
+            self._close()
+            self.failures += 1
+            if self.failures == 30:
+                self._log(f"music lights: cannot set the keyboard color ({err})")
+
+    def _close(self):
+        if self.fd is not None:
+            try:
+                os.close(self.fd)
+            except OSError:
+                pass
+            self.fd = None
+
+    # -- the sound ------------------------------------------------------------------
+    def _listen(self):
+        return subprocess.Popen(
+            ["pw-record", "-P", "{ stream.capture.sink = true media.name = \"Shiftray keyboard\" }",
+             "--rate", str(RATE), "--channels", "1", "--format", "s16", "-"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+    def _end(self):
+        if self.proc:
+            self.proc.terminate()
+            self.proc.wait()
+            self.proc = None
+
+    def _probe(self):
+        """Listens for half a second: True when something is heard."""
+        try:
+            self.proc = self._listen()
+        except OSError:
+            return False
+        data = self.proc.stdout.read(RATE)  # 0.5 s of 16-bit samples
+        self._end()
+        samples = array.array("h", data[:len(data) // 2 * 2])
+        return bool(samples) and max(map(abs, samples)) >= SILENT
+
+    def _wait(self, until):
+        """Sleeps in CHECK_EVERY steps until until() is true or stop()."""
+        while not self.stopping.wait(CHECK_EVERY):
+            if until():
+                return
+
+    def _wait_for_sound(self):
+        """Asleep after a silence: wakes on a stream that starts playing, a short listen every
+        PROBE_EVERY seconds (a stream that stayed open through the silence), or a pause."""
+        before = playing_streams()
+        last_probe = time.monotonic()
+
+        def woke():
+            nonlocal before, last_probe
+            if pause_reason():
+                return True  # the pause loop takes over
+            now = playing_streams()
+            if now is not None and before is not None:
+                if now - before:
+                    return True
+                before &= now  # a stream paused now counts as new when it plays again
+            if time.monotonic() - last_probe >= PROBE_EVERY:
+                last_probe = time.monotonic()
+                return self._probe()
+            return False
+        self._wait(woke)
+
+    # -- the loop ---------------------------------------------------------------------
     def run(self):
         chunk = RATE // FPS * 2
-        analyzer, shown, failures = Analyzer(), None, 0
+        analyzer, color = Analyzer(), self.idle
         while not self.stopping.is_set():
+            why = pause_reason()
+            if why:
+                self._log(f"music lights: paused ({why})", info=True)
+                if why != "backlight off":
+                    self.show(self.idle, force=True)  # not frozen on a flash when it is seen again
+                self._wait(lambda: pause_reason() is None)
+                continue
             try:
-                self.proc = subprocess.Popen(
-                    ["pw-record", "-P", "{ stream.capture.sink = true media.name = \"Shiftray keyboard\" }",
-                     "--rate", str(RATE), "--channels", "1", "--format", "s16", "-"],
-                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                self.proc = self._listen()
             except OSError as err:
                 self._log(f"music lights: no pw-record ({err})")
                 return
+            asleep, checked, data, buf = False, time.monotonic(), b"x", b""
+            pipe = self.proc.stdout.fileno()
+            os.set_blocking(pipe, False)
             while not self.stopping.is_set():
-                data = self.proc.stdout.read(chunk)
+                if not select.select([pipe], [], [], 1.0)[0]:
+                    continue
+                data = os.read(pipe, 1 << 16)  # all that is there, not one frame: never behind
                 if not data:
                     break  # PipeWire restarted (wireplumber, a new output): start again
-                samples = array.array("h", data[:len(data) // 2 * 2])
-                color = analyzer.frame(samples, len(samples) / RATE, self.idle)
-                if shown and max(abs(a - b) for a, b in zip(color, shown)) < 12:  # too small to see
-                    continue
-                try:
-                    write_color(*color)
-                    shown, failures = color, 0
-                except OSError as err:  # asleep, or the permission went away
-                    failures += 1
-                    if failures == 30:
-                        self._log(f"music lights: cannot set the keyboard color ({err})")
-            self.proc.terminate()
-            self.proc.wait()
-            if not self.stopping.is_set():
+                buf += data
+                if len(buf) > 3 * chunk:  # fell behind (a busy moment): the newest sound only
+                    buf = buf[-chunk:]
+                while len(buf) >= chunk:
+                    samples = array.array("h", buf[:chunk])
+                    buf = buf[chunk:]
+                    color = analyzer.frame(samples, len(samples) / RATE, self.idle)
+                self.show(color)  # one firmware call per read, for the newest frame
+                if analyzer.quiet >= SLEEP_AFTER:
+                    asleep = True
+                    break
+                if time.monotonic() - checked >= CHECK_EVERY:
+                    checked = time.monotonic()
+                    if pause_reason():
+                        break
+            self._end()
+            if self.stopping.is_set():
+                break
+            if asleep:
+                self.show(self.idle, force=True)
+                self._log("music lights: silence, not listening until something plays", info=True)
+                self._wait_for_sound()
+                analyzer.quiet = SILENT_AFTER  # heard again: a new silence must last SLEEP_AFTER once more
+            elif not data:
                 time.sleep(1)
-        try:
-            write_color(*self.idle)
-        except OSError:
-            pass
+        self.show(self.idle, force=True)
+        self._close()
 
-    def _log(self, text):
-        if self.log:
+    def _log(self, text, info=False):
+        if self.log and not info:
             self.log(text)
+        elif self.info:
+            self.info(text)
+
+    info = None  # set to log.info for the pauses (warnings go to log)

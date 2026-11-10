@@ -1627,7 +1627,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
             self.apply_aura()
             return
         log.info("keyboard lighting: Music")
-        self.music = hw.MusicLights(self.cfg.get("aura_colour", "ffffff"), log=log.warning)
+        self.music = hw.MusicLights(self.cfg.get("aura_colour", "ffffff"), log=log.warning,
+                                    step=int(self.cfg.get("music_step", hw.MUSIC_STEP)))  # hidden: for trying
+        self.music.info = log.info
         self.music.start()
 
     def stop_music(self):

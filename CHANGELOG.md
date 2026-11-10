@@ -11,8 +11,10 @@
   flashes on the beat of what the laptop plays and takes its colors from the character of the music:
   deep songs warm, bright ones cool; calm parts glow softly, a chorus brighter; fast songs flash
   short, slow ones breathe. In silence it fades into the chosen color. Once on, Music is one of the
-  effects and in Fn+F4's round; it runs only while it is the chosen effect (about 5-10% of one CPU
-  core and 10 MB, said next to the switch), and nothing at all otherwise. The color is written
+  effects and in Fn+F4's round; it runs only while it is the chosen effect (about 5% of one CPU
+  core and 10 MB, said next to the switch), and nothing at all otherwise. It pauses with the
+  backlight off, the lid closed or the screen locked, stops listening after 10 s of silence, and
+  always shows the newest sound, so it never falls behind the music. The color is written
   straight to asus-wmi, without asusd saving it many times a second; that needs a udev rule, asked
   for (one password) when Music is turned on, and System changes can undo it. The sound comes from
   the speakers' output, never the microphone.

@@ -187,6 +187,7 @@ from .music import (  # noqa: F401
     music_writable,
     music_access_script,
     MusicLights,
+    STEP as MUSIC_STEP,
 )
 from .system import (  # noqa: F401
     MEM_SLEEP,
