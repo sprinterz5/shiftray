@@ -69,6 +69,23 @@ def rpm_installed(name):
     return shutil.which("rpm") is not None and hw.run("rpm", "-q", name, timeout=5)[0]
 
 
+def unit_state(name):
+    """systemctl is-enabled: 'enabled', 'disabled', 'masked', 'static', ... or '' when not installed."""
+    ok, out = hw.run("systemctl", "is-enabled", name + ".service", timeout=5)
+    state = out.strip().splitlines()[-1] if out.strip() else ""
+    return "" if state in ("not-found", "") or "No such file" in out else state
+
+
+def profile_daemons():
+    """Power profile daemons that would set the power mode next to asusd: running, or able to start
+    (power-profiles-daemon also starts on D-Bus when KDE's PowerDevil asks for it, even disabled).
+    TuneD on its own (without tuned-ppd) is a conflict row of its own (conflicts.py)."""
+    found = [u for u in ("power-profiles-daemon", "tuned-ppd") if unit_state(u) not in ("", "masked")]
+    if "tuned-ppd" in found and unit_state("tuned") not in ("", "masked"):
+        found.append("tuned")
+    return found
+
+
 def check(key, title, ok, level, detail="", fix=True):
     return {"key": key, "title": tr(title), "ok": ok, "level": level, "detail": tr(detail) if detail else "",
             "fix": fix}
@@ -115,10 +132,15 @@ def checks():
         if not bpf:
             detail = tr("The kernel runs without BPF LSM, which Cardwire needs: see {url}", url=CARDWIRE_DOCS)
         rows.append(check("cardwire", "Cardwire (GPU modes)", gfx, RECOMMENDED, detail, fix=bpf))
-    if family == "fedora" and rpm_installed("tuned-ppd"):
-        rows.append(check("ppd", "Power profiles", False, RECOMMENDED,
-                          "tuned-ppd fights asusd over the platform profile (asusctl issue #724); "
-                          "switches to power-profiles-daemon, as asus-linux recommends."))
+    daemons = profile_daemons()
+    if daemons:  # asusctl's guide: let asusd manage the profiles, mask the external daemon
+        row = check("ppd", "Power profiles: asusd only", False, RECOMMENDED,
+                    tr("{names} sets the power mode too, and races asusd over the platform profile and CPU EPP "
+                       "(asusctl's guide). Turns it off and masks it, so KDE cannot start it again. KDE's "
+                       "battery applet then has no power profile slider: the app's modes take its place.",
+                       names=", ".join(daemons)))
+        row["units"] = daemons
+        rows.append(row)
     rows.append(check("keys", "Laptop keys (Fn+F4 and others)",
                       any(os.path.exists(f"{d}/{name}") for d in ("/etc/udev/rules.d", "/usr/lib/udev/rules.d")
                           for name in (hotkeys.RULE_NAME, hotkeys.LEGACY_RULE_NAME))
@@ -170,7 +192,9 @@ def checks():
 
 def todo_changes(todo):
     """Setup rows to fix -> the system_changes keys they make."""
-    keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost", "bpf_lsm", "music")}
+    keys = {k for k in todo if k in ("terra", "cardwire", "keys", "boost", "bpf_lsm", "music")}
+    if "ppd" in todo:
+        keys.add("profiles_masked")
     if "cardwire" in todo and distro() == "debian":
         keys.add("cardwire_deb")
     if "tray" in todo:
@@ -235,10 +259,6 @@ def script(rows):
         if "cardwire" in todo:
             # Cardwire also answers switcheroo-control's D-Bus API, so it replaces that package
             lines += ["step 'Cardwire'", "dnf install -y --allowerasing cardwire || exit 1"]
-        if "ppd" in todo:
-            lines += ["step 'power-profiles-daemon'",
-                      "dnf swap -y tuned-ppd power-profiles-daemon --allowerasing && "
-                      "systemctl enable --now power-profiles-daemon"]
     elif family == "arch":
         pkgs = (["asusctl"] if "asusd" in todo else []) + (["python-evdev", "python-dbus"] if "python" in todo else [])
         pkgs += [p for p in ("swayidle",) if p in todo] + tray_package(todo)
@@ -278,6 +298,9 @@ def script(rows):
             lines += ["echo 'Cardwire starts after the next restart, once the kernel runs BPF LSM.'"]
     if "keys" in todo:
         lines += ["step 'Laptop keys'", hotkeys.rule_script().rstrip("\n")]
+    units = next((r.get("units") for r in rows if r["key"] == "ppd" and "ppd" in todo), None)
+    if units:
+        lines += ["step 'Power profiles: asusd only'", f"systemctl mask --now {' '.join(u + '.service' for u in units)}"]
     if "music" in todo:
         lines += ["step 'Music keyboard effect'", hw.music_access_script().rstrip("\n")]
     if "boost" in todo:
@@ -416,7 +439,10 @@ class SetupWindow(QtWidgets.QWidget):
         self.proc = None
         if code == 0:  # into the journal, so Extra -> System changes can list and undo them
             for key in (todo_changes(self.todo) | ({"packages"} if self.packages else set())) - {"keys", "boost", "music"}:
-                system_changes.record(key, **({"names": self.packages} if key == "packages" else {}))
+                names = (self.packages if key == "packages" else
+                         next((r.get("units", []) for r in self.rows if r["key"] == "ppd"), [])
+                         if key == "profiles_masked" else None)
+                system_changes.record(key, **({"names": names} if names is not None else {}))
             if "tray" in self.todo and hw.gnome_tray() != "on":
                 self.log.appendPlainText("\n" + tr("Log out and back in once to see the icon in the top bar."))
             if "bpf_lsm" in self.todo:

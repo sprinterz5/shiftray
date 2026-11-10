@@ -97,6 +97,12 @@ def _rpm(name):
     return shutil.which("rpm") is not None and hw.run("rpm", "-q", name, timeout=5)[0]
 
 
+def _unmask_profiles():
+    names = journal().get("profiles_masked", {}).get("names") or ["power-profiles-daemon"]
+    units = " ".join(n + ".service" for n in names)
+    return f"systemctl unmask {units} && systemctl enable --now {units}"
+
+
 def _cardwire_applied():
     return hw.run("systemctl", "is-enabled", "--quiet", "cardwired", timeout=5)[0]
 
@@ -183,10 +189,16 @@ def changes():
                   "guide does it."),
                MEDIUM, True, _terra_applied,
                manual="sudo dnf remove terra-release"),
+        Change("profiles_masked", tr("Power profile daemons masked (asusd only)"),
+               tr("asusd manages the power mode itself; power-profiles-daemon or TuneD next to it race over "
+                  "the platform profile and CPU EPP, so they are stopped and masked, as asusctl's guide says. "
+                  "Undo starts them again (KDE's power profile slider comes back with them)."),
+               MEDIUM, True, lambda: "profiles_masked" in journal(),
+               undo_root=_unmask_profiles()),
         Change("ppd", tr("power-profiles-daemon instead of tuned-ppd"),
-               tr("Fedora ships tuned-ppd, which fights asusd over the power mode (asusctl issue #724); "
-                  "asus-linux recommends power-profiles-daemon. Undo brings tuned-ppd and that fight back."),
-               MEDIUM, True, lambda: "ppd" in journal() or (_terra_applied() and _rpm("power-profiles-daemon")),
+               tr("Older versions of the app swapped Fedora's tuned-ppd for power-profiles-daemon. asusctl now "
+                  "recommends neither next to asusd: Setup can mask it. Undo brings tuned-ppd back."),
+               MEDIUM, True, lambda: "ppd" in journal(),
                undo_root="dnf swap -y power-profiles-daemon tuned-ppd --allowerasing && systemctl enable --now tuned",
                manual="sudo dnf swap power-profiles-daemon tuned-ppd --allowerasing"),
         Change("cardwire", tr("Cardwire instead of supergfxd"),

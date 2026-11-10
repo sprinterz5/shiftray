@@ -152,7 +152,6 @@
  "The kernel runs without BPF LSM, which Cardwire needs: see {url}": "El kernel se ejecuta sin BPF LSM, que Cardwire necesita: ver {url}",
  "Cardwire (GPU modes)": "Cardwire (modos de GPU)",
  "Power profiles": "Perfiles de energía",
- "tuned-ppd fights asusd over the platform profile (asusctl issue #724); switches to power-profiles-daemon, as asus-linux recommends.": "tuned-ppd pelea con asusd por el perfil de plataforma (issue #724 de asusctl); cambia a power-profiles-daemon, como recomienda asus-linux.",
  "Python modules (evdev, dbus)": "Módulos de Python (evdev, dbus)",
  "For key bindings and keyboard shortcuts.": "Para la asignación de teclas y los atajos de teclado.",
  "NVIDIA driver": "Controlador NVIDIA",
@@ -507,5 +506,10 @@
  "Music": "Música",
  "The Music effect sets the keyboard color many times a second, which needs a permission for your user once (a udev rule; Extra → System changes can undo it). Allow it now? It asks for your password.": "El efecto Música cambia el color del teclado muchas veces por segundo, lo que requiere un permiso para tu usuario una sola vez (una regla udev; Extra → System changes puede deshacerla). ¿Permitirlo ahora? Pedirá tu contraseña.",
  "Music keyboard effect": "Efecto de teclado Música",
- "Lets the keyboard color follow the sound the laptop plays (Extra → Laptop Backlight).": "El color del teclado sigue el sonido que reproduce el portátil (Extra → Laptop Backlight)."
+ "Lets the keyboard color follow the sound the laptop plays (Extra → Laptop Backlight).": "El color del teclado sigue el sonido que reproduce el portátil (Extra → Laptop Backlight).",
+ "Older versions of the app swapped Fedora's tuned-ppd for power-profiles-daemon. asusctl now recommends neither next to asusd: Setup can mask it. Undo brings tuned-ppd back.": "Versiones anteriores de la app cambiaban tuned-ppd de Fedora por power-profiles-daemon. asusctl ya no recomienda ninguno junto a asusd: Setup puede enmascararlo. Deshacer devuelve tuned-ppd.",
+ "Power profile daemons masked (asusd only)": "Demonios de perfiles de energía enmascarados (solo asusd)",
+ "asusd manages the power mode itself; power-profiles-daemon or TuneD next to it race over the platform profile and CPU EPP, so they are stopped and masked, as asusctl's guide says. Undo starts them again (KDE's power profile slider comes back with them).": "asusd gestiona el modo de energía por sí mismo; power-profiles-daemon o TuneD a su lado compiten por el perfil de plataforma y el EPP de la CPU, así que se detienen y enmascaran, como dice la guía de asusctl. Deshacer los inicia de nuevo (el control de perfil de energía de KDE vuelve con ellos).",
+ "{names} sets the power mode too, and races asusd over the platform profile and CPU EPP (asusctl's guide). Turns it off and masks it, so KDE cannot start it again. KDE's battery applet then has no power profile slider: the app's modes take its place.": "{names} también fija el modo de energía y compite con asusd por el perfil de plataforma y el EPP de la CPU (guía de asusctl). Lo apaga y lo enmascara para que KDE no lo vuelva a iniciar. El applet de batería de KDE queda sin control de perfil de energía: los modos de la app lo sustituyen.",
+ "Power profiles: asusd only": "Perfiles de energía: solo asusd"
 }

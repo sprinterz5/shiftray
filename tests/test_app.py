@@ -48,6 +48,15 @@ class SetupScript(unittest.TestCase):
             files["/proc/cmdline"] = "root=/dev/sda1 quiet"
             self.assertTrue(setup.hw.bpf_lsm_fixable())
 
+    def test_power_profile_daemons_are_masked(self):
+        """asusctl's guide: asusd manages the power mode alone; the external daemons are masked."""
+        row = {"key": "ppd", "ok": False, "fix": True, "units": ["power-profiles-daemon"]}
+        with mock.patch.object(setup, "distro", return_value="arch"):
+            text = setup.script([row])
+        self.assertIn("systemctl mask --now power-profiles-daemon.service", text)
+        self.assertNotIn("dnf swap", text)
+        self.assertEqual(setup.todo_changes({"ppd"}), {"profiles_masked"})
+
     def test_every_root_step_is_a_listed_change(self):
         """Setup may only do what System changes can show (and mostly undo)."""
         keys = {c.key for c in sc.changes()}

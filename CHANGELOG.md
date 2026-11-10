@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Power modes: asusd only, as asusctl's guide says** (issue #2). Setup used to swap Fedora's
+  tuned-ppd for power-profiles-daemon, following the old asus-linux guide. asusctl now recommends no
+  external profile daemon next to asusd (they race over the platform profile and CPU EPP), so Setup
+  stops and masks power-profiles-daemon / tuned-ppd instead, on every distribution (masked, because
+  KDE's PowerDevil starts power-profiles-daemon again over D-Bus). KDE's power profile slider goes
+  away with it; the app's modes replace it. Undo in System changes starts them again.
 - **Music keyboard effect** (Extra → Laptop Backlight, and Fn+F4): the keyboard flashes on the beat
   of what the laptop plays and takes its colors from the character of the music: deep songs warm,
   bright ones cool; calm parts glow softly, a chorus brighter; fast songs flash short, slow ones

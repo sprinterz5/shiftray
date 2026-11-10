@@ -228,7 +228,7 @@ Undo (the root ones together, one password):
 | Your group may switch CPU boost (`/etc/tmpfiles.d`) | Setup, for CPU Boost per mode | low | Undo |
 | KDE's power profile on plug / unplug set to "leave unchanged" | first start on KDE | low | Undo (old values restored) |
 | Terra repository (Fedora) | Setup, for asusctl and Cardwire | medium | shown: `dnf remove terra-release` |
-| power-profiles-daemon instead of tuned-ppd (Fedora) | Setup | medium | Undo |
+| power-profiles-daemon / TuneD masked, asusd manages the power mode alone | Setup | medium | Undo |
 | Cardwire instead of supergfxd | Setup | medium | shown: re-enable supergfxd |
 | Kernel option `mem_sleep_default=deep` | Extra → Deep sleep (S3 laptops only) | high | Undo |
 | KDE's PowerDevil starts without ddcutil (a drop-in in your home folder) | Setup, on KDE with Secure Boot and ddcutil 2.x, where PowerDevil crashes in Eco ([ddcutil#641](https://github.com/rockowitz/ddcutil/issues/641)) | low | Undo |
