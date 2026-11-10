@@ -19,7 +19,7 @@ MUSIC_RULE = "/etc/udev/rules.d/71-shiftray-kbd-color.rules"
 RATE = 11025
 FPS = 30
 SILENT = 300  # peak (16-bit samples) below which the sound counts as silence
-SILENT_AFTER = 2.0  # seconds of silence before the keyboard shows the chosen color again
+SILENT_AFTER = 1.0  # seconds of silence before the keyboard fades into the chosen color
 
 
 def music_possible():
@@ -57,43 +57,51 @@ def hsv(h, v):
 
 
 class Analyzer:
-    """Samples in, one color a frame out: loudness -> brightness (fast up, slower down, against the
-    loudest of the last seconds), the share of bass -> hue (0 red ... 0.75 violet)."""
-    LOW = 1 - math.exp(-2 * math.pi * 200 / RATE)  # one-pole low-pass at 200 Hz: bass
-    MID = 1 - math.exp(-2 * math.pi * 2000 / RATE)  # what is left above 2 kHz: treble
+    """Samples in, one color a frame out. Mastered music is about equally loud all the time, so the
+    brightness follows the beat instead: bass against its own average of the last second (a kick
+    drum flashes, then fades). The hue drifts slowly and jumps a step on a strong beat. In silence
+    the color fades into the chosen one (idle), and back out when the sound returns."""
+    LOW = 1 - math.exp(-2 * math.pi * 150 / RATE)  # one-pole low-pass at 150 Hz: kick and bass
+    DRIFT = 1 / 20  # hue turns per second
 
     def __init__(self):
-        self.low = self.mid = 0.0
-        self.peak = SILENT
-        self.level = 0.0
+        self.low = 0.0
+        self.bass_avg = self.loud_peak = 0.0
+        self.beat = self.level = 0.0
         self.hue = 0.0
-        self.quiet = 0.0
+        self.fade = 1.0  # 1 = all idle color, 0 = all music
+        self.quiet = SILENT_AFTER
 
-    def frame(self, samples, seconds):
-        """-> (r, g, b), or None while it is quiet."""
-        low, mid, a_low, a_mid = self.low, self.mid, self.LOW, self.MID
-        bass = treble = total = 0.0
+    def frame(self, samples, seconds, idle=(255, 255, 255)):
+        low, a_low = self.low, self.LOW
+        bass = total = 0.0
         top = 0
         for x in samples:
             low += a_low * (x - low)
-            mid += a_mid * (x - mid)
             bass += low * low
-            treble += (x - mid) ** 2
             total += x * x
             top = max(top, abs(x))
-        self.low, self.mid = low, mid
+        self.low = low
         n = max(1, len(samples))
+        self.level *= 0.85
         if top < SILENT:
             self.quiet += seconds
-            self.level *= 0.8
-            return None if self.quiet >= SILENT_AFTER else hsv(self.hue, self.level)
-        self.quiet = 0.0
-        loud = math.sqrt(total / n)
-        self.peak = max(loud, self.peak * 0.997, SILENT)
-        self.level = max(min(1.0, loud / self.peak) ** 1.5, self.level * 0.82)
-        share = math.sqrt(bass) / (math.sqrt(bass) + math.sqrt(treble) + 1e-9)
-        self.hue += 0.25 * ((1 - share) * 0.75 - self.hue)
-        return hsv(self.hue, 0.08 + 0.92 * self.level)
+        else:
+            self.quiet = 0.0
+            bass, loud = math.sqrt(bass / n), math.sqrt(total / n)
+            self.bass_avg += 0.06 * (bass - self.bass_avg) if self.bass_avg else bass
+            self.loud_peak = max(loud, self.loud_peak * 0.995)
+            beat = min(1.0, max(0.0, (bass / (self.bass_avg + 1) - 1.0) / 0.8))
+            if beat > 0.6 and self.beat < 0.3:
+                self.hue += 0.11  # a new beat: the next color
+            self.beat = beat
+            body = 0.3 * loud / (self.loud_peak + 1)  # a glow between the beats, so it never goes dark
+            self.level = max(self.level, beat, body)
+        self.hue = (self.hue + self.DRIFT * seconds) % 1
+        step = seconds / 1.5 if self.quiet >= SILENT_AFTER else -seconds * 4
+        self.fade = min(1.0, max(0.0, self.fade + step))
+        music = hsv(self.hue, 0.12 + 0.88 * self.level)
+        return tuple(round(m + (i - m) * self.fade) for m, i in zip(music, idle))
 
 
 class MusicLights(threading.Thread):
@@ -131,7 +139,7 @@ class MusicLights(threading.Thread):
                 if not data:
                     break  # PipeWire restarted (wireplumber, a new output): start again
                 samples = array.array("h", data[:len(data) // 2 * 2])
-                color = analyzer.frame(samples, len(samples) / RATE) or self.idle
+                color = analyzer.frame(samples, len(samples) / RATE, self.idle)
                 if shown and max(abs(a - b) for a, b in zip(color, shown)) < 4:
                     continue
                 try:
