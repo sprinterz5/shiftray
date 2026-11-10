@@ -184,6 +184,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         self.gpu_busy = False
         self.battery_hover = False
         self.extra = None
+        self.music = None  # the Music keyboard effect while it runs
         self.fans = None
         self.updates = None
         self.setup = None
@@ -262,6 +263,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         self.idle_available = idle_available()
         self.idle_proc = None
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.stop_idle)
+        QtWidgets.QApplication.instance().aboutToQuit.connect(self.stop_music)
+        if self.aura_effect() == "music" and hw.music_writable():
+            QtCore.QTimer.singleShot(1500, self.start_music)
         self.apply_theme()
         self.apply_topmost()
         hints = QtGui.QGuiApplication.styleHints()
@@ -693,7 +697,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
             self.apply_gpu_auto()
         self.on_power_source(ac)
         self.restore_kbd_level(ac)
-        if self.cfg.get("aura_effect") and not os.path.exists(hw.KBD_IDLE_FILE):
+        if self.aura_effect() == "music":
+            pass  # still running: it picks up again by itself
+        elif self.cfg.get("aura_effect") and not os.path.exists(hw.KBD_IDLE_FILE):
             self.bg(hw.set_aura, self.aura_effect(), self.cfg.get("aura_colour", "ffffff"),
                     self.cfg.get("aura_speed", "med"))
         self.refresh_fast()
@@ -1591,14 +1597,56 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
     def aura_effect(self):
         """The effect in cfg, or Static where asusd does not allow it (an older choice, another laptop)."""
         effect = self.cfg.get("aura_effect", "static")
+        if effect == "music":
+            return effect if hw.music_possible() else "static"
         allowed = hw.aura_modes()
         return effect if allowed is None or effect in allowed else "static"
 
     def apply_aura(self):
         """The keyboard effect, colour and speed in cfg (set in Extra or by the Fn+F4 action)."""
         save_config(self.cfg)
+        if self.aura_effect() == "music":
+            self.start_music()
+            return
+        self.stop_music()
         self.bg(hw.set_aura, self.aura_effect(), self.cfg.get("aura_colour", "ffffff"),
                 self.cfg.get("aura_speed", "med"), then=lambda r: self.report(r, tr("Keyboard lighting")))
+
+    def start_music(self):
+        """The Music effect: the keyboard color follows the sound. It writes the color itself (not
+        through asusd), which needs Setup's permission once; asked here when it is missing."""
+        if self.music and self.music.is_alive():
+            self.music.set_idle(self.cfg.get("aura_colour", "ffffff"))  # a new color chosen
+            return
+        if not hw.music_writable():
+            answer = QtWidgets.QMessageBox.question(self, NAME, tr(
+                "The Music effect sets the keyboard color many times a second, which needs a permission "
+                "for your user once (a udev rule; Extra → System changes can undo it). Allow it now? "
+                "It asks for your password."))
+            if answer != QtWidgets.QMessageBox.Yes:
+                self.cfg["aura_effect"] = "static"
+                save_config(self.cfg)
+                if self.extra is not None:
+                    self.extra.show_aura()
+                self.apply_aura()
+                return
+
+            def allowed(result):
+                if result[0] and hw.music_writable():
+                    self.start_music()
+                else:
+                    self.report(result, tr("Keyboard lighting"))
+            self.bg(hw.run, "pkexec", "sh", "-c", hw.music_access_script(), then=allowed)
+            return
+        log.info("keyboard lighting: Music")
+        self.music = hw.MusicLights(self.cfg.get("aura_colour", "ffffff"), log=log.warning)
+        self.music.start()
+
+    def stop_music(self):
+        if self.music:
+            self.music.stop()
+            self.music.join(2)
+            self.music = None
 
     def on_limit(self, percent):
         percent = hw.firmware_limit(percent, self.limit_steps)

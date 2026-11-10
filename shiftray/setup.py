@@ -127,6 +127,9 @@ def checks():
     if hw.cpu_boost() is not None:
         rows.append(check("boost", "CPU Boost switch", hw.boost_writable(), OPTIONAL,
                           "Lets the app turn CPU boost on or off per mode (Fans → Advanced)."))
+    if hw.music_possible():
+        rows.append(check("music", "Music keyboard effect", hw.music_writable(), OPTIONAL,
+                          "Lets the keyboard color follow the sound the laptop plays (Extra → Laptop Backlight)."))
     if not all(importlib.util.find_spec(m) for m in ("evdev", "dbus")):
         rows.append(check("python", "Python modules (evdev, dbus)", False, RECOMMENDED,
                           "For key bindings and keyboard shortcuts."))
@@ -167,7 +170,7 @@ def checks():
 
 def todo_changes(todo):
     """Setup rows to fix -> the system_changes keys they make."""
-    keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost", "bpf_lsm")}
+    keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost", "bpf_lsm", "music")}
     if "cardwire" in todo and distro() == "debian":
         keys.add("cardwire_deb")
     if "tray" in todo:
@@ -275,6 +278,8 @@ def script(rows):
             lines += ["echo 'Cardwire starts after the next restart, once the kernel runs BPF LSM.'"]
     if "keys" in todo:
         lines += ["step 'Laptop keys'", hotkeys.rule_script().rstrip("\n")]
+    if "music" in todo:
+        lines += ["step 'Music keyboard effect'", hw.music_access_script().rstrip("\n")]
     if "boost" in todo:
         lines += ["step 'CPU Boost switch'", hw.boost_access_script().rstrip("\n")]
     stop = [r["conflict"] for r in rows if r["key"] in todo and r.get("conflict")]
@@ -410,7 +415,7 @@ class SetupWindow(QtWidgets.QWidget):
     def done(self, code, _status):
         self.proc = None
         if code == 0:  # into the journal, so Extra -> System changes can list and undo them
-            for key in (todo_changes(self.todo) | ({"packages"} if self.packages else set())) - {"keys", "boost"}:
+            for key in (todo_changes(self.todo) | ({"packages"} if self.packages else set())) - {"keys", "boost", "music"}:
                 system_changes.record(key, **({"names": self.packages} if key == "packages" else {}))
             if "tray" in self.todo and hw.gnome_tray() != "on":
                 self.log.appendPlainText("\n" + tr("Log out and back in once to see the icon in the top bar."))

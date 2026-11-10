@@ -171,6 +171,10 @@ def changes():
                tr("Your user group may turn CPU boost on and off, so each mode can have its own."),
                LOW, True, lambda: any(os.path.exists(p) for p in BOOST_FILES),
                undo_root=f"rm -f {' '.join(BOOST_FILES)} && chown root:root {hw.BOOST} && chmod 0644 {hw.BOOST}"),
+        Change("music", tr("Keyboard color permission (Music effect)"),
+               tr("A udev rule lets your user group set the keyboard color directly, so the Music effect "
+                  "can change it many times a second without asusd writing its config file each time."),
+               LOW, True, lambda: os.path.exists(hw.MUSIC_RULE), undo_root=hw.MUSIC_UNDO),
         Change("deep_sleep", tr("Deep sleep (kernel option)"),
                tr("Adds mem_sleep_default=deep to the kernel command line, so the laptop sleeps in S3."),
                HIGH, True, _deep_sleep_applied, undo_root=DEEP_SLEEP_UNDO),

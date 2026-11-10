@@ -501,5 +501,11 @@
  "Restart the laptop once: the kernel runs BPF LSM from the next boot, and Cardwire starts with it.": "Reinicia el portátil una vez: el kernel usará BPF LSM desde el próximo arranque, y Cardwire arrancará con él.",
  "Set up: works after the next restart.": "Configurado: funciona tras el próximo reinicio.",
  "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb).": "Necesario para Eco / Standard. Se instala desde la página de versiones de Cardwire (.deb).",
- "asusd allows only Static on this laptop: {model} is not in its list of keyboard effects (aura_support.ron) yet.": "asusd solo permite Estático en este portátil: {model} aún no está en su lista de efectos de teclado (aura_support.ron)."
+ "asusd allows only Static on this laptop: {model} is not in its list of keyboard effects (aura_support.ron) yet.": "asusd solo permite Estático en este portátil: {model} aún no está en su lista de efectos de teclado (aura_support.ron).",
+ "A udev rule lets your user group set the keyboard color directly, so the Music effect can change it many times a second without asusd writing its config file each time.": "Una regla udev permite a tu grupo de usuario fijar el color del teclado directamente, para que el efecto Música lo cambie muchas veces por segundo sin que asusd escriba su archivo de configuración cada vez.",
+ "Keyboard color permission (Music effect)": "Permiso para el color del teclado (efecto Música)",
+ "Music": "Música",
+ "The Music effect sets the keyboard color many times a second, which needs a permission for your user once (a udev rule; Extra → System changes can undo it). Allow it now? It asks for your password.": "El efecto Música cambia el color del teclado muchas veces por segundo, lo que requiere un permiso para tu usuario una sola vez (una regla udev; Extra → System changes puede deshacerla). ¿Permitirlo ahora? Pedirá tu contraseña.",
+ "Music keyboard effect": "Efecto de teclado Música",
+ "Lets the keyboard color follow the sound the laptop plays (Extra → Laptop Backlight).": "El color del teclado sigue el sonido que reproduce el portátil (Extra → Laptop Backlight)."
 }

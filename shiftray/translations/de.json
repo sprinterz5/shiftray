@@ -501,5 +501,11 @@
  "Restart the laptop once: the kernel runs BPF LSM from the next boot, and Cardwire starts with it.": "Starten Sie den Laptop einmal neu: Der Kernel lädt BPF LSM ab dem nächsten Start, und Cardwire startet damit.",
  "Set up: works after the next restart.": "Eingerichtet: wirkt nach dem nächsten Neustart.",
  "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb).": "Nötig für Eco / Standard. Wird von Cardwires Release-Seite installiert (.deb).",
- "asusd allows only Static on this laptop: {model} is not in its list of keyboard effects (aura_support.ron) yet.": "asusd erlaubt auf diesem Laptop nur Statisch: {model} steht noch nicht in seiner Liste der Tastatureffekte (aura_support.ron)."
+ "asusd allows only Static on this laptop: {model} is not in its list of keyboard effects (aura_support.ron) yet.": "asusd erlaubt auf diesem Laptop nur Statisch: {model} steht noch nicht in seiner Liste der Tastatureffekte (aura_support.ron).",
+ "A udev rule lets your user group set the keyboard color directly, so the Music effect can change it many times a second without asusd writing its config file each time.": "Eine udev-Regel erlaubt deiner Benutzergruppe, die Tastaturfarbe direkt zu setzen, damit der Musik-Effekt sie viele Male pro Sekunde ändern kann, ohne dass asusd jedes Mal seine Konfigurationsdatei schreibt.",
+ "Keyboard color permission (Music effect)": "Berechtigung für die Tastaturfarbe (Musik-Effekt)",
+ "Music": "Musik",
+ "The Music effect sets the keyboard color many times a second, which needs a permission for your user once (a udev rule; Extra → System changes can undo it). Allow it now? It asks for your password.": "Der Musik-Effekt ändert die Tastaturfarbe viele Male pro Sekunde und braucht dafür einmalig eine Berechtigung für deinen Benutzer (eine udev-Regel; Extra → System changes kann sie rückgängig machen). Jetzt erlauben? Es wird nach deinem Passwort gefragt.",
+ "Music keyboard effect": "Musik-Tastatureffekt",
+ "Lets the keyboard color follow the sound the laptop plays (Extra → Laptop Backlight).": "Die Tastaturfarbe folgt dem Ton, den der Laptop abspielt (Extra → Laptop Backlight)."
 }

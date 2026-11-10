@@ -179,6 +179,15 @@ from .desktop import (  # noqa: F401
     gnome_tray,
     set_gnome_appindicator,
 )
+from .music import (  # noqa: F401
+    KBD_RGB,
+    MUSIC_RULE,
+    MUSIC_UNDO,
+    music_possible,
+    music_writable,
+    music_access_script,
+    MusicLights,
+)
 from .system import (  # noqa: F401
     MEM_SLEEP,
     deep_sleep,

@@ -22,13 +22,15 @@ from .i18n import tr
 
 ISSUE_URL = HOMEPAGE + "/issues/new?template=bug_report.md"
 # keyboard effects (Laptop Backlight; Fn+F4's "Toggle Aura" walks through them)
-AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
+AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe")),
+        ("music", tr("Music"))]
 
 
 def aura_choices():
     """AURA without the effects asusd does not allow on this model (all when it cannot be asked)."""
     allowed = hw.aura_modes()
-    return [(k, label) for k, label in AURA if allowed is None or k in allowed]
+    return [(k, label) for k, label in AURA
+            if (hw.music_possible() if k == "music" else allowed is None or k in allowed)]
 
 
 SPEEDS = [("low", tr("Slow")), ("med", tr("Normal")), ("high", tr("Fast"))]
@@ -174,7 +176,7 @@ class ExtraWindow(QtWidgets.QWidget):
         self.colour_button.clicked.connect(self.pick_colour)
         effect_row.addWidget(self.colour_button)
         bl.addLayout(effect_row)
-        if len(aura_choices()) == 1:
+        if [k for k, _ in aura_choices() if k != "music"] == ["static"]:
             note = QtWidgets.QLabel(tr("asusd allows only Static on this laptop: {model} is not in its list of "
                                        "keyboard effects (aura_support.ron) yet.", model=hw._read("/sys/class/dmi/id/board_name") or "?"))
             note.setObjectName("tip")
