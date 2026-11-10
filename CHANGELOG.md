@@ -1,11 +1,13 @@
 # Changelog
 
 ## Unreleased
-- **Music keyboard effect** (Extra → Laptop Backlight, and Fn+F4): the keyboard pulses with the
-  sound the laptop plays, red for bass and blue-violet for treble, and shows the chosen color when it
-  is quiet. The color is written straight to asus-wmi, without asusd saving it 30 times a second; that
-  needs a udev rule once (one password, asked when Music is first chosen or in Setup; System changes
-  can undo it). The sound comes from the speakers' output, never the microphone.
+- **Music keyboard effect** (Extra → Laptop Backlight, and Fn+F4): the keyboard flashes on the beat
+  of what the laptop plays and takes its colors from the character of the music: deep songs warm,
+  bright ones cool; calm parts glow softly, a chorus brighter; fast songs flash short, slow ones
+  breathe. In silence it fades into the chosen color. The color is written straight to asus-wmi,
+  without asusd saving it 30 times a second; that needs a udev rule once (one password, asked when
+  Music is first chosen or in Setup; System changes can undo it). The sound comes from the speakers'
+  output, never the microphone.
 - **Keyboard effects asusd does not allow are no longer offered** (issue #1, TUF A16 FA608UM): a
   model missing from asusd's `aura_support.ron` gets Static only, and asusd ignored Breathe, Rainbow
   and Strobe without a word. Extra lists only the effects asusd reports and says why; Fn+F4 walks
