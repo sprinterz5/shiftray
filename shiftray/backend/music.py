@@ -110,18 +110,18 @@ class Analyzer:
             share = min(1.0, 3 * treble / (bass + treble + 1))  # treble is quieter: x3 spreads it
             self.tone += slow * (share - self.tone)
             self.energy += slow * (loud / (self.loud_peak + 1) - self.energy)
-            beat = min(1.0, max(0.0, (bass / (self.bass_avg + 1) - 1.0) / 0.8))
-            if beat > 0.6 and self.beat < 0.3:  # a new beat
+            beat = min(1.0, max(0.0, (bass / (self.bass_avg + 1) - 1.0) / 0.5))
+            if beat > 0.5 and self.beat < 0.25:  # a new beat: to the other side of the palette
                 self.tempo += 1 / 4  # counted over the same 4 seconds -> beats a second
-                self.phase += 0.25 + 0.1 * min(self.tempo, 4)
+                self.phase += 0.5
             self.beat = beat
             fast = min(1.0, self.tempo / 3)
-            self.level *= 0.9 - 0.12 * fast  # slow music: long fades; fast: short flashes
-            body = 0.08 + 0.45 * self.energy ** 1.5  # the glow between the beats
-            self.level = max(self.level, beat * (0.5 + 0.5 * self.energy), body)
-            self.phase += seconds * (0.05 + 0.1 * fast)  # breathing through the palette
+            self.level *= 0.86 - 0.1 * fast  # slow music: long fades; fast: short flashes
+            body = 0.04 + 0.16 * self.energy ** 1.5  # a dim glow between the beats: they must stand out
+            self.level = max(self.level, min(1.0, 1.5 * beat), body)
+            self.phase += seconds * (0.03 + 0.05 * fast)  # drifting through the palette
         # palette: centered on red (deep) ... blue (bright), 0.15 to each side
-        hue = ((0.62 * self.tone) + 0.15 * math.sin(2 * math.pi * self.phase) - 0.05) % 1
+        hue = ((0.62 * self.tone) + 0.2 * math.sin(2 * math.pi * (self.phase + 0.25)) - 0.05) % 1
         sat = 0.75 + 0.25 * self.energy  # calm parts a little paler
         step = seconds / 1.5 if self.quiet >= SILENT_AFTER else -seconds * 4
         self.fade = min(1.0, max(0.0, self.fade + step))
