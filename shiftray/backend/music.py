@@ -154,16 +154,18 @@ class Analyzer:
             top = max(top, abs(x))
         self.low, self.high = low, high
         n = max(1, len(samples))
+        k = seconds * FPS  # this many frames' worth: the rates below are per 1/FPS s, packets vary
+        ease = lambda a: 1 - (1 - a) ** k  # an easing step a per frame, over k frames
         slow = seconds / 4  # character: about the last 4 seconds
         self.tempo += -self.tempo * slow
         if top < SILENT:
             self.quiet += seconds
-            self.level *= 0.85
+            self.level *= 0.85 ** k
         else:
             self.quiet = 0.0
             bass, treble, loud = math.sqrt(bass / n), math.sqrt(treble / n), math.sqrt(total / n)
-            self.bass_avg += 0.06 * (bass - self.bass_avg) if self.bass_avg else bass
-            self.loud_peak = max(loud, self.loud_peak * 0.999)
+            self.bass_avg += ease(0.06) * (bass - self.bass_avg) if self.bass_avg else bass
+            self.loud_peak = max(loud, self.loud_peak * 0.999 ** k)
             share = min(1.0, 3 * treble / (bass + treble + 1))  # treble is quieter: x3 spreads it
             self.tone += slow * (share - self.tone)
             self.energy += slow * (loud / (self.loud_peak + 1) - self.energy)
@@ -173,7 +175,7 @@ class Analyzer:
                 self.phase += 0.35
             self.beat = beat
             fast = min(1.0, self.tempo / 3)
-            self.level *= 0.9 - 0.08 * fast  # slow music: long fades; fast: short flashes
+            self.level *= (0.9 - 0.08 * fast) ** k  # slow music: long fades; fast: short flashes
             body = 0.04 + 0.16 * self.energy ** 1.5  # a dim glow between the beats: they must stand out
             self.level = max(self.level, min(1.0, 1.5 * beat), body)
             self.phase += seconds * (0.03 + 0.05 * fast)  # drifting through the palette
@@ -181,9 +183,9 @@ class Analyzer:
         target = ((0.62 * self.tone) + 0.2 * math.sin(2 * math.pi * (self.phase + 0.25)) - 0.05) % 1
         if self.hue is None:
             self.hue = target
-        self.hue = (self.hue + 0.3 * ((target - self.hue + 0.5) % 1 - 0.5)) % 1  # glides, the short way round
+        self.hue = (self.hue + ease(0.3) * ((target - self.hue + 0.5) % 1 - 0.5)) % 1  # glides, the short way round
         # up at once (a flash late by even 0.1 s looks behind the beat), down smoothly
-        self.shown = self.level if self.level > self.shown else self.shown + 0.35 * (self.level - self.shown)
+        self.shown = self.level if self.level > self.shown else self.shown + ease(0.35) * (self.level - self.shown)
         hue = self.hue
         sat = 0.75 + 0.25 * self.energy  # calm parts a little paler
         step = seconds / 1.5 if self.quiet >= SILENT_AFTER else -seconds * 4
@@ -205,6 +207,7 @@ class MusicLights(threading.Thread):
         self.proc = None
         self.fd = None
         self.shown = None
+        self.last = 0.0
         self.failures = 0
 
     def set_idle(self, color):
@@ -217,8 +220,16 @@ class MusicLights(threading.Thread):
 
     # -- the keyboard ---------------------------------------------------------------
     def show(self, color, force=False):
-        if not force and self.shown and max(abs(a - b) for a, b in zip(color, self.shown)) < self.step:
-            return
+        """A flash (brighter) goes out at once; fading and gliding at most FPS times a second,
+        which is where the firmware calls (the cost) are."""
+        if not force and self.shown:
+            change = max(abs(a - b) for a, b in zip(color, self.shown))
+            if change < self.step:
+                return
+            flash = sum(color) > sum(self.shown) + 3 * self.step
+            if not flash and time.monotonic() - self.last < 1 / FPS:
+                return
+        self.last = time.monotonic()
         try:
             if self.fd is None:
                 self.fd = os.open(KBD_RGB, os.O_WRONLY)  # kept open: one call per color, not three
@@ -293,7 +304,7 @@ class MusicLights(threading.Thread):
     # -- the loop ---------------------------------------------------------------------
     def run(self):
         chunk = RATE // FPS * 2
-        analyzer, color = Analyzer(), self.idle
+        analyzer = Analyzer()
         while not self.stopping.is_set():
             why = pause_reason()
             if why:
@@ -319,11 +330,12 @@ class MusicLights(threading.Thread):
                 buf += data
                 if len(buf) > 3 * chunk:  # fell behind (a busy moment): the newest sound only
                     buf = buf[-chunk:]
-                while len(buf) >= chunk:
-                    samples = array.array("h", buf[:chunk])
-                    buf = buf[chunk:]
-                    color = analyzer.frame(samples, len(samples) / RATE, self.idle)
-                self.show(color)  # one firmware call per read, for the newest frame
+                if len(buf) < chunk // 4:
+                    continue  # a sliver: wait for a real packet (PipeWire sends ~20 ms ones)
+                # each packet as it comes, not whole 1/FPS frames: a beat shows within one packet
+                samples = array.array("h", buf[:len(buf) // 2 * 2])
+                buf = buf[len(buf) // 2 * 2:]
+                self.show(analyzer.frame(samples, len(samples) / RATE, self.idle))
                 if analyzer.quiet >= SLEEP_AFTER:
                     asleep = True
                     break
