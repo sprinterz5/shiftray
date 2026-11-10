@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- **Setup checked against asusctl's and Cardwire's current guides, for every distribution:**
+  - Arch: adds OpenGamingCollective's pacman repository (its key, `[ogc]`, one `pacman -Syu`) when
+    asusctl or Cardwire are not in the configured repositories; `pacman -S asusctl` failed before.
+  - openSUSE Tumbleweed: asusctl from Tuatara (was "not packaged"); `python3-dbus-python`; Cardwire
+    is not offered there (build from source), Setup no longer claims to install it.
+  - Ubuntu: asusctl comes from Homebrew (asusctl's guide); Setup says so and turns its units on, and
+    the app finds the Homebrew `asusctl`.
+  - Fedora: Terra with `terra-gpg-keys`; leaving the old COPR reinstalls asusctl from Terra.
+  - asusd is no longer `enable`d (a udev rule starts it), only restarted.
+  - BPF LSM: a clear warning before the kernel option changes, with how to boot without it, and a
+    "Set up without it" choice; only offered with a kernel built with BPF LSM and booting through GRUB.
 - **Power modes: asusd only, as asusctl's guide says** (issue #2). Setup used to swap Fedora's
   tuned-ppd for power-profiles-daemon, following the old asus-linux guide. asusctl now recommends no
   external profile daemon next to asusd (they race over the platform profile and CPU EPP), so Setup
@@ -22,7 +33,7 @@
   model missing from asusd's `aura_support.ron` gets Static only, and asusd ignored Breathe, Rainbow
   and Strobe without a word. Extra lists only the effects asusd reports and says why; Fn+F4 walks
   through those; an effect chosen before falls back to Static.
-- **Ubuntu and Debian: GPU modes from Setup.** The kernel there has BPF LSM built in but off, so
+- **Ubuntu and Debian: GPU modes from Setup (experimental).** The kernel there has BPF LSM built in but off, so
   Cardwire could not run. Setup now adds bpf to the kernel's `lsm=` boot option (keeping the modules
   it already runs; a GRUB drop-in, or grubby) and installs the `.deb` of Cardwire's latest release
   from its GitHub page with apt; Cardwire starts after one restart. Both are in System changes:

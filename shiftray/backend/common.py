@@ -32,6 +32,13 @@ def _read_int(path, default=None):
         return default
 
 
+# Ubuntu: asusctl's guide installs it with Homebrew, whose bin is not on PATH when the app starts
+# from autostart or the menu
+BREW_BIN = "/home/linuxbrew/.linuxbrew/bin"
+if os.path.isdir(BREW_BIN) and BREW_BIN not in os.environ.get("PATH", "").split(":"):
+    os.environ["PATH"] = os.environ.get("PATH", "/usr/bin") + ":" + BREW_BIN
+
+
 def run(*cmd, timeout=15):
     """Run a command, return (ok, combined output). Every call is in the --debug log."""
     if not shutil.which(cmd[0]):

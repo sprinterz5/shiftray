@@ -48,16 +48,24 @@ def bpf_lsm():
 
 
 def bpf_lsm_fixable():
-    """lsm= can be set here: GRUB through grubby or update-grub, and no lsm= of the user's own
-    on the command line (Undo removes the option, which would lose theirs)."""
-    own = any(a.startswith("lsm=") for a in (_read("/proc/cmdline") or "").split())
-    return not own and bool(_read(LSM)) and bool(shutil.which("grubby") or shutil.which("update-grub"))
+    """lsm= can be set here and will work: the kernel is built with BPF LSM (CONFIG_BPF_LSM=y, as
+    Cardwire's guide checks), it boots through GRUB set up by grubby or update-grub (not
+    systemd-boot or kernelstub, where the option would silently do nothing), and there is no lsm=
+    of the user's own on the command line (Undo removes the option, which would lose theirs)."""
+    if any(a.startswith("lsm=") for a in (_read("/proc/cmdline") or "").split()) or not _read(LSM):
+        return False
+    config = _read(f"/boot/config-{os.uname().release}")
+    if config is not None and "CONFIG_BPF_LSM=y" not in config:
+        return False
+    if shutil.which("grubby"):
+        return True
+    return bool(shutil.which("update-grub")) and os.path.exists("/boot/grub/grub.cfg")
 
 
 def bpf_lsm_script():
     """Root lines adding bpf to the security modules the kernel runs now (lsm= replaces the
     kernel's default list, so the current one is kept as it is). Takes effect at the next boot."""
-    lsm = ",".join([m for m in (_read(LSM) or "").split(",") if m] + ["bpf"])
+    lsm = ",".join([m for m in (_read(LSM) or "").split(",") if m and m != "bpf"] + ["bpf"])
     if shutil.which("grubby"):
         return f"grubby --update-kernel=ALL --args=lsm={lsm}"
     return (f"mkdir -p /etc/default/grub.d && echo 'GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB_CMDLINE_LINUX_DEFAULT "

@@ -22,11 +22,20 @@ REQUIRED, RECOMMENDED, OPTIONAL, INFO = "required", "recommended", "optional", "
 USER_STEPS = {"powerdevil", "tray"}  # done as the user, in the home folder: no password
 OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linux.repo"
 TERRA_INSTALL = ("dnf install -y --nogpgcheck --repofrompath "
-                 "'terra,https://repos.fyralabs.com/terra$releasever' terra-release")
+                 "'terra,https://repos.fyralabs.com/terra$releasever' terra-release terra-gpg-keys")
 NVIDIA_HOWTO = "https://rpmfusion.org/Howto/NVIDIA"
 CARDWIRE_RELEASES = "https://api.github.com/repos/OpenGamingCollective/cardwire/releases/latest"
 CARDWIRE_DOCS = "https://opengamingcollective.github.io/cardwire/getting-started/installation.html"
 ASUS_LINUX = "https://asus-linux.org/guides/"
+ASUSCTL_DOCS = "https://opengamingcollective.github.io/asusctl/"
+UBUNTU_GUIDE = ASUSCTL_DOCS + "distributions/ubuntu.html"
+# Arch: asusctl and Cardwire come from OpenGamingCollective's pacman repository (asusctl's guide)
+OGC_KEY = "F79100EF8C802DAB81C323BB8EEA5962FE510E19"
+OGC_SERVER = "https://pacman.opengamingcollective.org"
+PACMAN_CONF = "/etc/pacman.conf"
+# openSUSE Tumbleweed: Tuatara, the openSUSE counterpart of Terra (asusctl's guide)
+TUATARA = "https://repos.fyralabs.com/tuatara-tumbleweed"
+ZYPPER = "zypper --non-interactive --gpg-auto-import-keys"
 
 
 def os_release():
@@ -86,6 +95,30 @@ def profile_daemons():
     return found
 
 
+def ogc_repo():
+    try:
+        with open(PACMAN_CONF) as f:
+            return any(line.strip() == "[ogc]" for line in f)
+    except OSError:
+        return False
+
+
+def pacman_has(name):
+    """A configured pacman repository has the package (CachyOS and others may have asusctl)."""
+    return shutil.which("pacman") is not None and hw.run("pacman", "-Si", name, timeout=10)[0]
+
+
+def tuatara_repo():
+    try:
+        return any("tuatara" in n for n in os.listdir("/etc/zypp/repos.d"))
+    except OSError:
+        return False
+
+
+def tumbleweed():
+    return "tumbleweed" in os_release().get("ID", "")
+
+
 def check(key, title, ok, level, detail="", fix=True):
     return {"key": key, "title": tr(title), "ok": ok, "level": level, "detail": tr(detail) if detail else "",
             "fix": fix}
@@ -104,9 +137,27 @@ def checks():
         rows.append(check("terra", "ASUS Linux repository (Terra)", terra, RECOMMENDED,
                           "The old COPR repository no longer gets updates; moves to Terra."
                           if os.path.exists(OLD_COPR) else "Where asusctl and Cardwire come from on Fedora."))
-    asusd = shutil.which("asusctl") is not None and service_active("asusd")
+    installed = shutil.which("asusctl") is not None
+    if family == "arch" and not ogc_repo() and (
+            (not installed and not pacman_has("asusctl"))
+            or (has_dgpu() and shutil.which("cardwire") is None and not pacman_has("cardwire"))):
+        rows.append(check("ogc", "OpenGamingCollective repository (Arch)", False, RECOMMENDED,
+                          "Where asusctl and Cardwire come from on Arch (asusctl's guide): adds [ogc] to "
+                          "/etc/pacman.conf, trusts its signing key, and updates the system once (pacman -Syu)."))
+    if family == "suse" and tumbleweed():
+        rows.append(check("tuatara", "ASUS Linux repository (Tuatara)", tuatara_repo(), RECOMMENDED,
+                          "Where asusctl comes from on openSUSE Tumbleweed (Fyra Labs, asusctl's guide)."))
+    asusd = installed and service_active("asusd")
+    fix, detail = True, "asusctl is missing or its service is not running."
+    if family == "debian" and not installed:
+        fix, detail = False, tr("Ubuntu 26.04: asusctl comes from Homebrew, as asusctl's guide shows (it cannot be "
+                                "installed as root, so not by Setup): {url}", url=UBUNTU_GUIDE)
+    elif family == "suse" and not tumbleweed() and not installed:
+        fix, detail = False, tr("asusctl is packaged for openSUSE Tumbleweed only (Tuatara): {url}", url=ASUSCTL_DOCS)
+    elif family not in ("fedora", "arch", "debian", "suse") and not installed:
+        fix, detail = False, tr("Install asusctl as your distribution's guide says: {url}", url=ASUSCTL_DOCS)
     rows.append(check("asusd", "asusd (modes, fans, keyboard, battery)", asusd, REQUIRED,
-                      "" if asusd else "asusctl is missing or its service is not running."))
+                      "" if asusd else detail, fix=fix))
     if has_dgpu():
         bpf = hw.bpf_lsm()
         bpf_soon = not bpf and system_changes.bpf_lsm_pending()  # set up, waiting for the restart
@@ -114,8 +165,10 @@ def checks():
             fixable = hw.bpf_lsm_fixable()
             rows.append(check("bpf_lsm", "BPF LSM (kernel option for Cardwire)", bpf_soon, RECOMMENDED,
                               "Set up: works after the next restart." if bpf_soon else
-                              "Cardwire blocks the NVIDIA GPU through it. Ubuntu and Debian build it into the "
-                              "kernel but leave it off: adds bpf to the lsm= boot option. Works after a restart."
+                              "Changes how the kernel boots. Cardwire blocks the NVIDIA GPU through BPF LSM; "
+                              "Ubuntu and Debian build it but leave it off, so this adds bpf to the lsm= boot "
+                              "option (the security modules running now stay). Works after a restart. "
+                              "Only for Eco / Standard: skip it if you do not need them."
                               if fixable else
                               tr("The kernel runs without BPF LSM, which Cardwire needs: see {url}", url=CARDWIRE_DOCS),
                               fix=fixable))
@@ -129,9 +182,14 @@ def checks():
                   "without a logout." if old else
                   "Needed for Eco / Standard. Installed from Cardwire's own release page (.deb)."
                   if family == "debian" else "Needed for Eco / Standard.")
+        can = bpf
+        if family == "suse" or family not in ("fedora", "arch", "debian"):
+            can = False  # openSUSE: build from source; others: the distribution's own way
+            detail = tr("Not packaged for this distribution yet: build it as Cardwire's guide says: {url}",
+                        url=CARDWIRE_DOCS) if not gfx else ""
         if not bpf:
             detail = tr("The kernel runs without BPF LSM, which Cardwire needs: see {url}", url=CARDWIRE_DOCS)
-        rows.append(check("cardwire", "Cardwire (GPU modes)", gfx, RECOMMENDED, detail, fix=bpf))
+        rows.append(check("cardwire", "Cardwire (GPU modes)", gfx, RECOMMENDED, detail, fix=can))
     daemons = profile_daemons()
     if daemons:  # asusctl's guide: let asusd manage the profiles, mask the external daemon
         row = check("ppd", "Power profiles: asusd only", False, RECOMMENDED,
@@ -192,7 +250,7 @@ def checks():
 
 def todo_changes(todo):
     """Setup rows to fix -> the system_changes keys they make."""
-    keys = {k for k in todo if k in ("terra", "cardwire", "keys", "boost", "bpf_lsm", "music")}
+    keys = {k for k in todo if k in ("terra", "ogc", "tuatara", "cardwire", "keys", "boost", "bpf_lsm", "music")}
     if "ppd" in todo:
         keys.add("profiles_masked")
     if "cardwire" in todo and distro() == "debian":
@@ -248,7 +306,8 @@ def script(rows):
         if "terra" in todo:
             lines += ["step 'Terra repository'", f"{TERRA_INSTALL} || exit 1"]
             if os.path.exists(OLD_COPR):
-                lines += [f"rm -f '{OLD_COPR}'", "dnf upgrade -y asusctl"]
+                # asusctl's guide: remove the COPR and reinstall the tools from Terra
+                lines += [f"rm -f '{OLD_COPR}'", "dnf distro-sync -y asusctl"]
         if "asusd" in todo:
             pkgs.append("asusctl")
         if "python" in todo:
@@ -260,6 +319,11 @@ def script(rows):
             # Cardwire also answers switcheroo-control's D-Bus API, so it replaces that package
             lines += ["step 'Cardwire'", "dnf install -y --allowerasing cardwire || exit 1"]
     elif family == "arch":
+        if "ogc" in todo:  # asusctl's guide: the key, the repository, then a full update (no partial upgrades)
+            lines += ["step 'OpenGamingCollective repository'",
+                      f"pacman-key --recv-keys {OGC_KEY} && pacman-key --lsign-key {OGC_KEY} || exit 1",
+                      f"grep -qx '\\[ogc\\]' {PACMAN_CONF} || printf '\\n[ogc]\\nServer = {OGC_SERVER}\\n' >> {PACMAN_CONF}",
+                      "pacman -Syu --noconfirm || exit 1"]
         pkgs = (["asusctl"] if "asusd" in todo else []) + (["python-evdev", "python-dbus"] if "python" in todo else [])
         pkgs += [p for p in ("swayidle",) if p in todo] + tray_package(todo)
         if pkgs:
@@ -269,20 +333,29 @@ def script(rows):
                       "pacman -S --needed --noconfirm cardwire; } || echo 'Cardwire is in the AUR "
                       f"(yay -S cardwire): see {CARDWIRE_DOCS}'"]
     elif family in ("debian", "suse"):
-        tool = "apt-get install -y" if family == "debian" else "zypper --non-interactive install"
-        pkgs = (["python3-evdev", "python3-dbus"] if "python" in todo else []) + [p for p in ("swayidle",) if p in todo]
+        tool = "apt-get install -y" if family == "debian" else f"{ZYPPER} install"
+        python = ["python3-evdev", "python3-dbus"] if family == "debian" else ["python3-evdev", "python3-dbus-python"]
+        pkgs = (python if "python" in todo else []) + [p for p in ("swayidle",) if p in todo]
         pkgs += tray_package(todo)
+        if "tuatara" in todo:
+            lines += ["step 'Tuatara repository'",
+                      f"{ZYPPER} install --plus-repo '{TUATARA}' tuatara-release && {ZYPPER} refresh || exit 1"]
         if pkgs:
             lines += [f"step 'Installing {' '.join(pkgs)}'", f"{tool} {' '.join(pkgs)}"]
-        if "asusd" in todo:
-            lines += [f"echo 'asusctl is not packaged here: see {ASUS_LINUX}'"]
+        if "asusd" in todo and family == "suse":
+            lines += ["step 'asusctl'", f"{ZYPPER} install --allow-vendor-change asusctl || exit 1"]
+        if "asusd" in todo and family == "debian":
+            # Homebrew's cask ships the units; its guide turns them on (it does not start them itself)
+            lines += ["step 'asusd'", "systemctl enable --now asusd.service asus-shutdown.service 2>/dev/null || "
+                      "systemctl enable --now asusd.service"]
         if "cardwire" in todo and family == "debian":
             lines += ["step 'Cardwire'", *cardwire_deb_lines()]
     if "bpf_lsm" in todo:
         lines += ["step 'BPF LSM (boot option)'", hw.bpf_lsm_script() + " || exit 1"]
     # restart, not just start: after an upgrade the old daemon would keep running
-    if todo & {"asusd", "terra"}:
-        lines += ["step 'asusd'", "systemctl enable asusd 2>/dev/null; systemctl restart asusd"]
+    if todo & {"asusd", "terra", "ogc", "tuatara"}:
+        # a udev rule starts asusd (asusctl's guide: not to be enabled); a restart picks up an upgrade
+        lines += ["step 'asusd'", "systemctl restart asusd"]
     if "cardwire" in todo:
         # supergfxd and Cardwire must not both manage the dGPU. supergfxd goes back to Hybrid
         # first, so the dGPU is on the bus with its driver, then it is turned off for good.
@@ -413,6 +486,26 @@ class SetupWindow(QtWidgets.QWidget):
         """One password for everything in the list (each row already says what it does); the steps in
         the home folder first, without one."""
         self.todo = {r["key"] for r in self.rows if not r["ok"] and r["fix"]}
+        if "bpf_lsm" in self.todo:
+            box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, tr("BPF LSM"), tr(
+                "Setup will change how the kernel boots: it adds bpf to the lsm= option (the list of security "
+                "modules). Cardwire needs it for Eco / Standard. It is the normal setting on Fedora and Arch, "
+                "but Ubuntu and Debian leave it off, so this has been tried on fewer laptops.\n\n"
+                "If the laptop does not start after the restart: in the GRUB menu press E, delete the lsm=... "
+                "part at the end of the linux line, press Ctrl+X to boot, then use Undo in Extra → System "
+                "changes.\n\nChange the boot option?"), parent=self)
+            yes = box.addButton(tr("Change it"), QtWidgets.QMessageBox.AcceptRole)
+            skip = box.addButton(tr("Set up without it"), QtWidgets.QMessageBox.RejectRole)
+            box.addButton(QtWidgets.QMessageBox.Cancel)
+            box.exec()
+            if box.clickedButton() is skip:
+                self.todo.discard("bpf_lsm")
+                for r in self.rows:
+                    if r["key"] in ("bpf_lsm", "cardwire"):
+                        r["fix"] = False  # Cardwire without BPF LSM would not start
+                self.todo.discard("cardwire")
+            elif box.clickedButton() is not yes:
+                return
         self.go.setEnabled(False)
         self.later.setEnabled(False)
         self.log.clear()

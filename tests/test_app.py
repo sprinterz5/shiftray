@@ -42,11 +42,30 @@ class SetupScript(unittest.TestCase):
 
     def test_bpf_lsm_left_alone_with_the_users_own_lsm(self):
         files = {"/proc/cmdline": "root=/dev/sda1 lsm=landlock,apparmor", setup.hw.LSM: "landlock,apparmor"}
+        which = lambda n: "/usr/sbin/update-grub" if n == "update-grub" else None
         with mock.patch.object(setup.hw.system, "_read", side_effect=lambda p, *d: files.get(p)), \
-                mock.patch.object(setup.hw.system.shutil, "which", return_value="/usr/sbin/update-grub"):
+                mock.patch.object(setup.hw.system.shutil, "which", side_effect=which), \
+                mock.patch.object(setup.hw.system.os.path, "exists", return_value=True):
             self.assertFalse(setup.hw.bpf_lsm_fixable())
             files["/proc/cmdline"] = "root=/dev/sda1 quiet"
             self.assertTrue(setup.hw.bpf_lsm_fixable())
+            files["/boot/config-" + setup.hw.system.os.uname().release] = "CONFIG_LSM=\"apparmor\"\n"
+            self.assertFalse(setup.hw.bpf_lsm_fixable(), "a kernel built without CONFIG_BPF_LSM")
+
+    def test_arch_adds_the_ogc_repository_and_updates_once(self):
+        with mock.patch.object(setup, "distro", return_value="arch"):
+            text = setup.script(self.rows("ogc", "asusd"))
+        self.assertIn(f"pacman-key --lsign-key {setup.OGC_KEY}", text)
+        self.assertIn("[ogc]\\nServer = https://pacman.opengamingcollective.org", text)
+        self.assertLess(text.index("pacman -Syu"), text.index("pacman -S --needed"))
+        self.assertNotIn("systemctl enable asusd", text)  # a udev rule starts it
+
+    def test_opensuse_installs_asusctl_from_tuatara(self):
+        with mock.patch.object(setup, "distro", return_value="suse"):
+            text = setup.script(self.rows("tuatara", "asusd", "python"))
+        self.assertIn("--plus-repo 'https://repos.fyralabs.com/tuatara-tumbleweed' tuatara-release", text)
+        self.assertIn("install --allow-vendor-change asusctl", text)
+        self.assertIn("python3-dbus-python", text)
 
     def test_power_profile_daemons_are_masked(self):
         """asusctl's guide: asusd manages the power mode alone; the external daemons are masked."""
@@ -62,7 +81,7 @@ class SetupScript(unittest.TestCase):
         keys = {c.key for c in sc.changes()}
         with mock.patch.object(setup, "distro", return_value="debian"):
             self.assertTrue(setup.todo_changes({"terra", "asusd", "python", "swayidle", "cardwire", "ppd",
-                                                "keys", "boost", "bpf_lsm"}) <= keys)
+                                                "keys", "boost", "bpf_lsm", "ogc", "tuatara"}) <= keys)
 
 
 class SystemChanges(unittest.TestCase):

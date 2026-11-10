@@ -195,6 +195,16 @@ def changes():
                   "Undo starts them again (KDE's power profile slider comes back with them)."),
                MEDIUM, True, lambda: "profiles_masked" in journal(),
                undo_root=_unmask_profiles()),
+        Change("ogc", tr("OpenGamingCollective repository (Arch)"),
+               tr("Arch: asusctl and Cardwire come from OpenGamingCollective's pacman repository, added the way "
+                  "asusctl's guide does it ([ogc] in /etc/pacman.conf and its signing key)."),
+               MEDIUM, True, lambda: "ogc" in journal(),
+               manual="sudo sed -i '/^\\[ogc\\]/,/^Server/d' /etc/pacman.conf && "
+                      "sudo pacman-key --delete F79100EF8C802DAB81C323BB8EEA5962FE510E19"),
+        Change("tuatara", tr("Tuatara repository (openSUSE)"),
+               tr("openSUSE Tumbleweed: asusctl comes from Tuatara (Fyra Labs), added the way asusctl's guide does it."),
+               MEDIUM, True, lambda: "tuatara" in journal(),
+               manual="sudo zypper remove tuatara-release"),
         Change("ppd", tr("power-profiles-daemon instead of tuned-ppd"),
                tr("Older versions of the app swapped Fedora's tuned-ppd for power-profiles-daemon. asusctl now "
                   "recommends neither next to asusd: Setup can mask it. Undo brings tuned-ppd back."),
