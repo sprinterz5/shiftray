@@ -681,6 +681,8 @@ class ExtraWindow(QtWidgets.QWidget):
         self.main.save()
         self.fill_aura_combo()
         self.show_aura()
+        if on and self.cfg.get("aura_effect") == "music":
+            self.main.apply_aura()  # chosen before (or kept from an older version): start it now
 
     def show_aura(self):
         """The effect in cfg, also after Fn+F4 changed it."""
