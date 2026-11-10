@@ -27,6 +27,7 @@ SILENT_AFTER = 1.0  # seconds of silence before the keyboard fades into the chos
 SLEEP_AFTER = 10.0  # seconds of silence before it stops listening
 CHECK_EVERY = 2.0  # seconds between the checks for a paused state and for a new sound
 PROBE_EVERY = 20.0  # while asleep: listen this often for a moment (a stream that was silent, now not)
+LATENCY = "20ms"  # asks PipeWire for small packets; pw-record's default allows 100 ms lumps
 STEP = 12  # smallest change of a color channel worth a firmware call
 LID = "/proc/acpi/button/lid"
 
@@ -136,7 +137,7 @@ class Analyzer:
         self.tempo = 1.0  # beats a second
         self.phase = 0.0  # where on the palette
         self.fade = 1.0  # 1 = all idle color, 0 = all music
-        self.shown = 0.0  # the brightness shown: follows level a little behind, so flashes are not hard cuts
+        self.shown = 0.0  # the brightness shown: jumps up with level, falls behind it smoothly
         self.hue = None
         self.quiet = SILENT_AFTER
 
@@ -181,7 +182,8 @@ class Analyzer:
         if self.hue is None:
             self.hue = target
         self.hue = (self.hue + 0.3 * ((target - self.hue + 0.5) % 1 - 0.5)) % 1  # glides, the short way round
-        self.shown += (0.55 if self.level > self.shown else 0.35) * (self.level - self.shown)
+        # up at once (a flash late by even 0.1 s looks behind the beat), down smoothly
+        self.shown = self.level if self.level > self.shown else self.shown + 0.35 * (self.level - self.shown)
         hue = self.hue
         sat = 0.75 + 0.25 * self.energy  # calm parts a little paler
         step = seconds / 1.5 if self.quiet >= SILENT_AFTER else -seconds * 4
@@ -240,7 +242,8 @@ class MusicLights(threading.Thread):
     def _listen(self):
         return subprocess.Popen(
             ["pw-record", "-P", "{ stream.capture.sink = true media.name = \"Shiftray keyboard\" }",
-             "--rate", str(RATE), "--channels", "1", "--format", "s16", "-"],
+             "--rate", str(RATE), "--channels", "1", "--format", "s16",
+             "--latency", LATENCY, "-"],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     def _end(self):
