@@ -286,8 +286,16 @@ it. Close it, or turn on **Extra → Stop all apps using GPU when switching to E
 
 Click it to start the service. If that does not help, open **Extra → Setup**. On Ubuntu and
 Debian the kernel starts without BPF LSM, which Cardwire needs: Setup adds it to the boot options
-(listed in Extra → System changes, with Undo) and Cardwire starts after one restart. asusctl itself
-has no Ubuntu package yet; see [asus-linux.org](https://asus-linux.org/guides/).
+(listed in Extra → System changes, with Undo) and Cardwire starts after one restart. On Ubuntu
+26.04 asusctl comes from Homebrew; see [asusctl's Ubuntu guide](https://opengamingcollective.github.io/asusctl/distributions/ubuntu.html).
+</details>
+
+<details>
+<summary><b>Starting once without the BPF LSM boot option</b></summary>
+
+The option is one word on the kernel's command line, so it can be left out for one start: in the
+GRUB menu press **E**, remove `lsm=...` from the end of the `linux` line and press **Ctrl+X**. To
+remove it for good, use Undo for "BPF LSM (kernel option)" in **Extra → System changes**.
 </details>
 
 <details>

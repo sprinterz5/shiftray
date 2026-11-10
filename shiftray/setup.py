@@ -165,10 +165,9 @@ def checks():
             fixable = hw.bpf_lsm_fixable()
             rows.append(check("bpf_lsm", "BPF LSM (kernel option for Cardwire)", bpf_soon, RECOMMENDED,
                               "Set up: works after the next restart." if bpf_soon else
-                              "Changes how the kernel boots. Cardwire blocks the NVIDIA GPU through BPF LSM; "
-                              "Ubuntu and Debian build it but leave it off, so this adds bpf to the lsm= boot "
-                              "option (the security modules running now stay). Works after a restart. "
-                              "Only for Eco / Standard: skip it if you do not need them."
+                              "Cardwire (Eco / Standard) needs one kernel setting, BPF LSM, which Fedora and Arch have "
+                              "on and Ubuntu and Debian leave off. Setup turns it on with a boot option (bpf added "
+                              "to lsm=); it works after a restart and can be undone in System changes."
                               if fixable else
                               tr("The kernel runs without BPF LSM, which Cardwire needs: see {url}", url=CARDWIRE_DOCS),
                               fix=fixable))
@@ -487,14 +486,12 @@ class SetupWindow(QtWidgets.QWidget):
         the home folder first, without one."""
         self.todo = {r["key"] for r in self.rows if not r["ok"] and r["fix"]}
         if "bpf_lsm" in self.todo:
-            box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Warning, tr("BPF LSM"), tr(
-                "Setup will change how the kernel boots: it adds bpf to the lsm= option (the list of security "
-                "modules). Cardwire needs it for Eco / Standard. It is the normal setting on Fedora and Arch, "
-                "but Ubuntu and Debian leave it off, so this has been tried on fewer laptops.\n\n"
-                "If the laptop does not start after the restart: in the GRUB menu press E, delete the lsm=... "
-                "part at the end of the linux line, press Ctrl+X to boot, then use Undo in Extra → System "
-                "changes.\n\nChange the boot option?"), parent=self)
-            yes = box.addButton(tr("Change it"), QtWidgets.QMessageBox.AcceptRole)
+            box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Question, tr("BPF LSM"), tr(
+                "Cardwire, which switches Eco / Standard, needs one kernel setting: BPF LSM. Fedora and Arch "
+                "have it on; Ubuntu and Debian leave it off.\n\n"
+                "Shiftray's Setup turns it on by adding bpf to the kernel's boot options (lsm=). It takes effect "
+                "after a restart and can be undone in Extra → System changes.\n\nTurn it on?"), parent=self)
+            yes = box.addButton(tr("Turn it on"), QtWidgets.QMessageBox.AcceptRole)
             skip = box.addButton(tr("Set up without it"), QtWidgets.QMessageBox.RejectRole)
             box.addButton(QtWidgets.QMessageBox.Cancel)
             box.exec()

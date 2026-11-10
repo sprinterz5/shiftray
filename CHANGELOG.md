@@ -10,8 +10,8 @@
     the app finds the Homebrew `asusctl`.
   - Fedora: Terra with `terra-gpg-keys`; leaving the old COPR reinstalls asusctl from Terra.
   - asusd is no longer `enable`d (a udev rule starts it), only restarted.
-  - BPF LSM: a clear warning before the kernel option changes, with how to boot without it, and a
-    "Set up without it" choice; only offered with a kernel built with BPF LSM and booting through GRUB.
+  - BPF LSM: Setup says what it is and asks first (with a "Set up without it" choice); only offered
+    with a kernel built with BPF LSM that boots through GRUB. README: how to start once without it.
 - **Power modes: asusd only, as asusctl's guide says** (issue #2). Setup used to swap Fedora's
   tuned-ppd for power-profiles-daemon, following the old asus-linux guide. asusctl now recommends no
   external profile daemon next to asusd (they race over the platform profile and CPU EPP), so Setup

@@ -516,12 +516,10 @@
  "Music effect: the keyboard follows the sound": "音乐效果：键盘随声音变化",
  "Arch: asusctl and Cardwire come from OpenGamingCollective's pacman repository, added the way asusctl's guide does it ([ogc] in /etc/pacman.conf and its signing key).": "Arch：asusctl 和 Cardwire 来自 OpenGamingCollective 的 pacman 仓库，按 asusctl 指南的方式添加（/etc/pacman.conf 中的 [ogc] 及其签名密钥）。",
  "BPF LSM": "BPF LSM",
- "Change it": "更改",
  "Install asusctl as your distribution's guide says: {url}": "请按你的发行版指南安装 asusctl：{url}",
  "Not packaged for this distribution yet: build it as Cardwire's guide says: {url}": "此发行版尚无软件包：请按 Cardwire 指南自行构建：{url}",
  "OpenGamingCollective repository (Arch)": "OpenGamingCollective 仓库（Arch）",
  "Set up without it": "不更改它继续设置",
- "Setup will change how the kernel boots: it adds bpf to the lsm= option (the list of security modules). Cardwire needs it for Eco / Standard. It is the normal setting on Fedora and Arch, but Ubuntu and Debian leave it off, so this has been tried on fewer laptops.\n\nIf the laptop does not start after the restart: in the GRUB menu press E, delete the lsm=... part at the end of the linux line, press Ctrl+X to boot, then use Undo in Extra → System changes.\n\nChange the boot option?": "Setup 将更改内核的启动方式：在 lsm= 选项（安全模块列表）中加入 bpf。Cardwire 的 Eco / Standard 需要它。这在 Fedora 和 Arch 上是默认设置，但 Ubuntu 和 Debian 默认关闭，因此在较少的笔记本上测试过。\n\n如果重启后笔记本无法启动：在 GRUB 菜单中按 E，删除 linux 行末尾的 lsm=... 部分，按 Ctrl+X 启动，然后在 Extra → System changes 中使用撤销。\n\n要更改启动选项吗？",
  "Tuatara repository (openSUSE)": "Tuatara 仓库（openSUSE）",
  "Ubuntu 26.04: asusctl comes from Homebrew, as asusctl's guide shows (it cannot be installed as root, so not by Setup): {url}": "Ubuntu 26.04：asusctl 通过 Homebrew 安装，见 asusctl 指南（无法以 root 安装，因此 Setup 不会安装）：{url}",
  "asusctl is packaged for openSUSE Tumbleweed only (Tuatara): {url}": "asusctl 仅为 openSUSE Tumbleweed 打包（Tuatara）：{url}",
@@ -529,5 +527,7 @@
  "Where asusctl and Cardwire come from on Arch (asusctl's guide): adds [ogc] to /etc/pacman.conf, trusts its signing key, and updates the system once (pacman -Syu).": "Arch 上 asusctl 和 Cardwire 的来源（asusctl 指南）：在 /etc/pacman.conf 中添加 [ogc]，信任其签名密钥，并更新一次系统（pacman -Syu）。",
  "ASUS Linux repository (Tuatara)": "ASUS Linux 仓库（Tuatara）",
  "Where asusctl comes from on openSUSE Tumbleweed (Fyra Labs, asusctl's guide).": "openSUSE Tumbleweed 上 asusctl 的来源（Fyra Labs，asusctl 指南）。",
- "Changes how the kernel boots. Cardwire blocks the NVIDIA GPU through BPF LSM; Ubuntu and Debian build it but leave it off, so this adds bpf to the lsm= boot option (the security modules running now stay). Works after a restart. Only for Eco / Standard: skip it if you do not need them.": "更改内核的启动方式。Cardwire 通过 BPF LSM 屏蔽 NVIDIA 显卡；Ubuntu 和 Debian 内置了它但默认关闭，因此这里将 bpf 加入启动选项 lsm=（当前运行的安全模块保持不变）。重启后生效。仅用于 Eco / Standard：不需要的话可以跳过。"
+ "Cardwire (Eco / Standard) needs one kernel setting, BPF LSM, which Fedora and Arch have on and Ubuntu and Debian leave off. Setup turns it on with a boot option (bpf added to lsm=); it works after a restart and can be undone in System changes.": "Cardwire（Eco / Standard）需要一项内核设置 BPF LSM：Fedora 和 Arch 默认开启，Ubuntu 和 Debian 默认关闭。Setup 通过启动选项开启它（在 lsm= 中加入 bpf）；重启后生效，可在 System changes 中撤销。",
+ "Cardwire, which switches Eco / Standard, needs one kernel setting: BPF LSM. Fedora and Arch have it on; Ubuntu and Debian leave it off.\n\nShiftray's Setup turns it on by adding bpf to the kernel's boot options (lsm=). It takes effect after a restart and can be undone in Extra → System changes.\n\nTurn it on?": "用于切换 Eco / Standard 的 Cardwire 需要一项内核设置：BPF LSM。Fedora 和 Arch 默认开启；Ubuntu 和 Debian 默认关闭。\n\nShiftray 的 Setup 会在内核启动选项（lsm=）中加入 bpf 来开启它。重启后生效，可在 Extra → System changes 中撤销。\n\n要开启吗？",
+ "Turn it on": "开启"
 }
